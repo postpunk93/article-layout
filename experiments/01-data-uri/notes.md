@@ -6,16 +6,15 @@
 
 ## Result
 
-- Heading: <kept as H1 / merged into paragraph / lost>
-- Paragraphs: <kept / merged / split>
-- Image: <appeared as image block / appeared as broken icon / silently dropped / something else>
-- Caption: <attached to image as caption / orphaned paragraph below / lost>
-
-## Screenshot
-
-(attach or describe)
+- Heading: ✅ kept
+- Paragraphs: ✅ kept
+- Image: ❌ dropped — VC's paste handler strips `data:` URIs
+- Caption: ✅ attached correctly (i.e. the *figure/figcaption* structure was preserved; the image slot was just empty)
 
 ## Verdict
 
-- [ ] PASS — image lands as a real image block. Stop here. Data URI is our strategy.
-- [ ] FAIL — proceed to Task 2 (experiment 02).
+- [x] FAIL — data URIs are not a viable transport for VC. Proceed to experiment 02 (localhost).
+
+## Takeaway
+
+Structure (h1, p, figure, figcaption) DOES survive paste — that's a useful side finding for the future converter. Only the image bytes were lost. Confirms the problem is purely the image *src* scheme, not the surrounding markup.

@@ -7,3 +7,5 @@ node_modules/
 __pycache__/
 *.pyc
 .venv/
+.vc-profile/
+.pytest_cache/

@@ -30,3 +30,15 @@ def test_classless_span_is_normal_and_entities_decoded():
     runs = spans_to_runs(p, ITALIC, BOLD)
     assert runs[0].text == "café"
     assert runs[0].bold is False and runs[0].italic is False
+
+
+def test_br_only_span_contributes_no_run():
+    p = _p('<p><span class="c0">a</span><span><br></span><span class="c0">b</span></p>')
+    runs = spans_to_runs(p, ITALIC, BOLD)
+    assert [r.text for r in runs] == ["ab"]  # br yields "", same-style spans merge
+
+
+def test_single_space_span_is_preserved_for_word_spacing():
+    p = _p('<p><span class="c0">a</span><span class="c0"> </span><span class="c8">b</span></p>')
+    runs = spans_to_runs(p, ITALIC, BOLD)
+    assert [r.text for r in runs] == ["a ", "b"]  # the inter-word space survives

@@ -38,14 +38,14 @@ def spans_to_runs(block, italic_classes, bold_classes):
     """
     runs = []
     for span in block.find_all("span", recursive=False):
-        text = span.get_text()  # decodes entities; <br> yields ""/newline
-        if text == "" or text is None:
+        text = span.get_text()  # decodes entities; a <br>-only span yields ""
+        if not text:
             continue
         bold, italic = _span_style(span, italic_classes, bold_classes)
         if runs and runs[-1].bold == bold and runs[-1].italic == italic:
             runs[-1].text += text
         else:
             runs.append(Run(text=text, bold=bold, italic=italic))
-    # drop runs that are only whitespace produced by <br>
+    # drop whitespace-only runs, but keep a single inter-word space
     runs = [r for r in runs if r.text.strip() != "" or r.text == " "]
     return runs

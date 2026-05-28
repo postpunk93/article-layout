@@ -35,3 +35,49 @@ def test_paragraph_runs_and_empty_dropped():
     assert doc.blocks[1].runs[1].italic is True
     # the empty <p> produced no block
     assert len(doc.blocks) == 2
+
+
+TWO_H1 = """
+<html><head><style>.c0{font-weight:400;font-style:normal}</style></head><body>
+<h1 class="c6"><span class="c0">First Title</span></h1>
+<p class="c4"><span class="c0">Body para</span></p>
+<h1 class="c6"><span class="c0">Second Title</span></h1>
+</body></html>
+"""
+
+NO_H1 = """
+<html><head><style>.c0{font-weight:400;font-style:normal}</style></head><body>
+<h2 class="c2"><span class="c0">Only a section</span></h2>
+<p class="c4"><span class="c0">text</span></p>
+</body></html>
+"""
+
+ORDERED = """
+<html><head><style>.c0{font-weight:400;font-style:normal}</style></head><body>
+<h1 class="c6"><span class="c0">T</span></h1>
+<p class="c4"><span class="c0">one</span></p>
+<h2 class="c2"><span class="c0">mid</span></h2>
+<p class="c4"><span class="c0">two</span></p>
+</body></html>
+"""
+
+
+def test_only_first_h1_is_title_second_h1_ignored():
+    doc = parse(TWO_H1)
+    assert doc.title == "First Title"
+    # the second h1 must NOT overwrite the title and must NOT become a block
+    texts = ["".join(r.text for r in b.runs) for b in doc.blocks]
+    assert "Second Title" not in texts
+    assert all(not (isinstance(b, Heading) and b.level == 1) for b in doc.blocks)
+
+
+def test_document_with_no_h1_has_empty_title():
+    doc = parse(NO_H1)
+    assert doc.title == ""
+    assert isinstance(doc.blocks[0], Heading)
+
+
+def test_block_order_preserved_p_h2_p():
+    doc = parse(ORDERED)
+    kinds = [(type(b).__name__, "".join(r.text for r in b.runs)) for b in doc.blocks]
+    assert kinds == [("Paragraph", "one"), ("Heading", "mid"), ("Paragraph", "two")]

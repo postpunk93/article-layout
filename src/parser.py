@@ -61,7 +61,7 @@ def parse(html: str) -> Document:
     body = soup.find("body")
     title = ""
     blocks = []
-    for el in body.find_all(["h1", "h2", "p"], recursive=True):
+    for el in body.find_all(["h1", "h2", "p"], recursive=False):
         if el.find("img") is not None:
             continue  # images handled in Task 6
         runs = spans_to_runs(el, italic_classes, bold_classes)

@@ -26,3 +26,13 @@ def test_style_class_sets_on_real_example():
     italic, bold = style_class_sets(EXAMPLE)
     assert {"c3", "c5", "c8"}.issubset(italic)
     assert {"c1", "c9", "c10"}.issubset(bold)
+
+
+def test_handles_tab_newline_whitespace_and_multiple_style_blocks():
+    html = (
+        "<style>.c1 {\n\tfont-weight:\t700;\n\tfont-style:\n italic\n}</style>"
+        "<style>.c2{font-style:italic}</style>"
+    )
+    italic, bold = style_class_sets(html)
+    assert italic == {"c1", "c2"}
+    assert bold == {"c1"}

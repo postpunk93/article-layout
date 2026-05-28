@@ -10,11 +10,10 @@ def style_class_sets(html: str):
     A class is bold if its rule contains font-weight:700.
     """
     soup = BeautifulSoup(html, "html.parser")
-    style = soup.find("style")
-    css = style.get_text() if style else ""
+    css = "\n".join(s.get_text() for s in soup.find_all("style"))
     italic, bold = set(), set()
     for name, body in re.findall(r"\.(c\d+)\s*\{([^}]*)\}", css):
-        decls = body.replace(" ", "")
+        decls = re.sub(r"\s+", "", body)
         if "font-style:italic" in decls:
             italic.add(name)
         if "font-weight:700" in decls:

@@ -69,7 +69,20 @@ Paste is lossy/unpredictable. So the adapter builds the body **block by block**:
   the adapter consumes the IR directly. (emit_html remains useful for debugging/
   future paste-capable platforms.)
 
-## To verify during adapter build
-- Ctrl+B / Ctrl+I inline toggles while typing runs (else fall back to plain text in v1).
-- Exact caption editable selector relative to its image block (scope per block).
-- Header item: confirm first `[data-type="header"]` yields H2 sizing in VC.
+## Verified during adapter build (all CONFIRMED working)
+- **Ctrl+B / Ctrl+I inline toggles work** while typing runs → produce `<b>`/`<i>`
+  in the block. The adapter toggles per run.
+- **Caption** = the just-added image block's `.editor-tool-input--text-sm`
+  (use `locator(...).last`). Typed caption attaches to the media block.
+- **First `[data-type="header"]` item = H2** (placeholder "Подзаголовок"), renders
+  as a section header. Used for our heading(level=2).
+- After an image+caption, pressing **Enter** moves out of the caption and creates
+  the next body block (so block flow continues cleanly).
+
+## Full-article validation (2026-05-29)
+Ran `vc_adapter.build_document` on the parsed `example/index.html`:
+- 68 blocks built: title, 8 H2 headings, 10 images (image1..10), the rest
+  paragraphs. image8 got its italic caption; others none — matches the parser.
+- Draft auto-saved (`...&id=2953128`). Build took ~115s. No errors.
+- Reopened draft renders correctly (screenshot `capture/draft_reopened.png`).
+Verdict: per-block adapter works end-to-end on the real article.

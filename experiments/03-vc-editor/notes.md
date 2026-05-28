@@ -1,48 +1,75 @@
-# Experiment 03 — VC editor discovery
+# Experiment 03 — VC editor discovery (COMPLETE)
 
 **Date:** 2026-05-29
-**Goal:** record real selectors + the working paste mechanism before writing the adapter.
+**Result:** Full create-draft flow confirmed end-to-end (title + paragraphs +
+uploaded image + caption + autosave). Screenshot `capture/step6_image_uploaded.png`.
 
-## Key discovery: the editor is **Editor.js** (Codex Editor)
-VC's post editor is an Editor.js instance. DOM uses `codex-editor`, `ce-block`,
-`ce-toolbar`, `cdx-inline-toolbar`, `editor-tool-input` classes. This shapes the
-whole adapter: the body is a block model (paragraph/header/image blocks), not a
-single contenteditable.
+## The editor is **Editor.js** (Codex Editor)
+VC's post editor is an Editor.js instance. Body is a block model, not one
+contenteditable. Block tools have classes like `editor-text-tool`,
+`editor-header-tool`, `editor-tool-input`.
 
-## New-entry navigation
-- The editor opens as a MODAL on the same page at URL: `https://vc.ru/?modal=editor`
-  (navigating directly to this URL is expected to open the editor — to confirm).
-- Triggered from the feed by the button `button.button--type-secondary` with text "Написать".
-- Login: persisted in the `.vc-profile` persistent context (logged in by hand once).
-  Subsequent scripted runs are already authenticated.
-- Page title when editor open: `🖊 Новый пост`.
+## Navigation & auth
+- Open the editor directly: navigate to **`https://vc.ru/?modal=editor`** (opens
+  the new-post modal; no need to click "Написать").
+- Auth persists in the `.vc-profile` persistent context — scripted runs are
+  already logged in after a one-time manual login.
+- Page title when open: `🖊 Новый пост`.
 
-## Selectors (confirmed from capture/candidates.json)
-- **Title field**: `div.editor-tool-input[data-placeholder="Заголовок"]`, `contenteditable="true"`
-  (classes: `editor-tool-input editor-tool-input--multiline editor-tool-input--text-lg editor-tool-input--with-limit`).
-- **Body editor root**: `.codex-editor` ; blocks are `.ce-block` / `.ce-block__content`.
-- **Add-block ("+") button**: `.ce-toolbar__plus`.
-- **Inline formatting toolbar** (appears on text selection): `button.cdx-inline-toolbar__button`
-  with `data-type="bold"`, `data-type="italic"`, `data-type="link"`.
-- **Inline link input**: `input.cdx-inline-toolbar__input` (placeholder "Вставьте ссылку ...").
-- **Block toolbox search**: `input.ce-toolbox-search-input` (placeholder "Поиск").
-- **Publish button**: `button.button--type-primary` with text "Опубликовать".
+## Confirmed selectors
+- **Title** (Editor.js block 0): `div.editor-tool-input[data-placeholder="Заголовок"]`
+  (contenteditable). Click + type.
+- **Body root**: `.codex-editor`; blocks are `.ce-block`; a paragraph block's
+  editable is `.editor-text-tool` (placeholder "Мы были где-то около Барстоу...").
+- **Add-block "+"**: `.ce-toolbar__plus` — ONLY visible/clickable when the
+  current block is EMPTY. (Create an empty block with Enter first.)
+- **Toolbox popover** (after clicking +): `.ce-popover.ce-toolbox.opened`, items
+  are `li.ce-toolbox__item[data-type="..."]`. Confirmed types in order:
+  `text`, `header` (H2), `header` (H3), `media` (Фото/видео — IMAGE),
+  `andropov` (link embed), `quote`, `list`, `code`, `delimiter`, `audio`,
+  `quiz`, `person`.
+  - First `[data-type="header"]` item = **H2**; second = H3.
+- **Inline formatting toolbar** (on text selection): `button.cdx-inline-toolbar__button`
+  with `data-type="bold"|"italic"|"link"`. (Ctrl+B / Ctrl+I likely also work —
+  to confirm during adapter build.)
+- **Publish button (DO NOT click)**: `button.button--type-primary` text "Опубликовать".
 
-## Still TODO (next discovery round — Claude-driven, login persisted)
-- Body paragraph editable selector (only the title contenteditable exists in the
-  empty editor; body block editable appears after focusing the body).
-- Image insertion flow: click `.ce-toolbar__plus` -> toolbox -> the "image" tool
-  item -> the `input[type=file]` that receives the upload (none present in empty editor).
-- Caption field on an inserted image block.
-- How a saved draft is detected (autosave indicator / draft list).
+## Image insertion — CONFIRMED WORKING
+1. Ensure an empty block is active (press Enter to create one).
+2. Click `.ce-toolbar__plus` to open the toolbox.
+3. Intercept the native file chooser and JS-click the media item:
+   ```python
+   with page.expect_file_chooser() as fc:
+       page.eval_on_selector('.ce-toolbox__item[data-type="media"]', "el => el.click()")
+   fc.value.set_files("in/<slug>/images/imageN.png")
+   ```
+   (A plain `page.click` on the media item did NOT fire the chooser; the JS
+   `el.click()` does.)
+4. The image uploads to VC and renders as a real image block.
+5. **Caption field** appears as the image block's `editor-tool-input--text-sm`
+   contenteditable (placeholder "Подпись"/"Описание"). Click + type the caption.
 
-## Text paste mechanism — to test
-- [ ] clipboard write via context.grant_permissions(["clipboard-write"]) + Ctrl+V
-- [ ] dispatch a `paste` event with DataTransfer(text/html)
-- Editor.js converts pasted HTML to blocks (h2->header, p->paragraph, strong/em inline).
-  Must verify whether our emit_body() HTML maps cleanly and whether `[[IMG:...]]` /
-  `[[CAP:...]]` markers survive as plain paragraph text.
+## Draft autosave — CONFIRMED
+- As soon as body content is added, the URL gains `&action=edit&id=<NNN>` and a
+  "Сохранено" indicator shows. The draft is saved automatically. Detect a saved
+  draft by waiting for the URL to contain `id=`.
 
-## Markers / fallback
-- If markers don't survive or cursor placement is unreliable -> fall back to
-  per-block typing using the "+" toolbox and the title/body editables. Decision: <pending discovery>
+## Body text approach — DECISION: per-block typing (variant A), NOT paste
+Tested clipboard `ClipboardItem(text/html)` + Ctrl+V (`capture/paste1_clipboard.json`):
+- `<h2>` → header block ✓
+- **`<strong>`/`<em>` were STRIPPED** (plain text) ✗
+- **The `[[IMG:...]]` marker paragraph AND a following paragraph were DROPPED** ✗✗
+Paste is lossy/unpredictable. So the adapter builds the body **block by block**:
+- Title → type into the title block.
+- Paragraph → type text; bold/italic runs via Ctrl+B / Ctrl+I toggles (to verify).
+- Heading(2) → empty block → "+" → first `[data-type="header"]` item → type.
+- Image → the confirmed image flow above → fill caption.
+- New block between items via Enter.
+- The `[[IMG:...]]`/`[[CAP:...]]` markers from emit_html are therefore NOT pasted;
+  the adapter consumes the IR directly. (emit_html remains useful for debugging/
+  future paste-capable platforms.)
+
+## To verify during adapter build
+- Ctrl+B / Ctrl+I inline toggles while typing runs (else fall back to plain text in v1).
+- Exact caption editable selector relative to its image block (scope per block).
+- Header item: confirm first `[data-type="header"]` yields H2 sizing in VC.

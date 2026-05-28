@@ -108,10 +108,9 @@ def build_document(page, doc, images_dir: Path, log=print):
         log(f"WARNING: did not detect saved-draft URL; current: {page.url}")
 
 
-def run_document(slug_dir: str, doc, body_html=None, keep_open=True):
+def run_document(images_dir: Path, doc, keep_open=True):
     """Launch a visible, authenticated browser and build the draft. Stops there."""
-    slug = Path(slug_dir)
-    images_dir = slug / "images"
+    images_dir = Path(images_dir)
     with sync_playwright() as p:
         ctx = p.chromium.launch_persistent_context(
             PROFILE_DIR, headless=False, args=["--start-maximized"], no_viewport=True

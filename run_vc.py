@@ -29,7 +29,7 @@ def main():
         print(f"WARNING: referenced images not found in {images_dir}: {missing}")
 
     print(f"Parsed: title={doc.title!r}, blocks={len(doc.blocks)}, images={len(referenced)}")
-    vc_adapter.run_document(str(slug_dir), doc)
+    vc_adapter.run_document(images_dir, doc)
 
 
 if __name__ == "__main__":

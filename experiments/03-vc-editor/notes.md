@@ -83,6 +83,21 @@ Paste is lossy/unpredictable. So the adapter builds the body **block by block**:
 Ran `vc_adapter.build_document` on the parsed `example/index.html`:
 - 68 blocks built: title, 8 H2 headings, 10 images (image1..10), the rest
   paragraphs. image8 got its italic caption; others none — matches the parser.
-- Draft auto-saved (`...&id=2953128`). Build took ~115s. No errors.
-- Reopened draft renders correctly (screenshot `capture/draft_reopened.png`).
-Verdict: per-block adapter works end-to-end on the real article.
+- Draft auto-saved. Build took ~105s. No errors.
+
+### BUG FOUND + FIXED: scrambled block order in image-dense regions
+- Symptom: paragraphs out of order near clusters of images (image-sparse areas fine).
+- Root cause: image upload is **async**; the adapter didn't wait for it. The old
+  `wait_for_selector('.editor-tool-input--text-sm')` returned immediately for every
+  image after the first (a caption field from a prior image already existed), so the
+  code typed the next paragraphs while the upload was still in flight; Editor.js then
+  inserted the image at the moved caret — several blocks too low — shifting paragraphs.
+- Evidence: diffed the persisted draft's block order vs the parsed IR — scrambling was
+  localised to image-dense rows, re-syncing in sparse regions.
+- Fix (`_insert_image`): after `set_files`, wait via `wait_for_function` until a NEW
+  `<img>` exists in the editor AND it has finished loading a real `http(s)` src
+  (`complete && naturalWidth>0`). Also stopped pressing Enter after the final block
+  (was leaving a trailing empty paragraph).
+- Re-verified on the full article: **block order matches the IR exactly (diffs=0, 69
+  blocks).**
+Verdict: per-block adapter works end-to-end on the real article, order-correct.

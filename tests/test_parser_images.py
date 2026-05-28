@@ -47,3 +47,46 @@ def test_image_alone_then_normal_paragraph():
     assert doc.blocks[0].caption is None
     assert isinstance(doc.blocks[1], Paragraph)
     assert doc.blocks[1].runs[0].text == "Regular following paragraph."
+
+
+def test_caption_preserves_inter_word_space_across_spans():
+    # trailing italic text split across spans with a whitespace-only span between words
+    html = (
+        '<html><head><style>.c3{font-style:italic}</style></head><body>'
+        '<p class="c4"><span><img src="images/imageX.png"></span>'
+        '<span class="c3">word</span><span class="c3"> </span><span class="c3">two</span></p>'
+        '</body></html>'
+    )
+    from src.parser import parse
+    doc = parse(html)
+    assert doc.blocks[0].caption is not None
+    assert doc.blocks[0].caption[0].text == "word two"
+
+
+def test_mixed_italic_and_normal_trailing_is_not_a_caption():
+    html = (
+        '<html><head><style>.c0{font-weight:400;font-style:normal}.c3{font-style:italic}</style></head><body>'
+        '<p class="c4"><span><img src="images/imageX.png"></span>'
+        '<span class="c3">italic </span><span class="c0">normal</span></p>'
+        '</body></html>'
+    )
+    from src.parser import parse
+    from src.ir import Image, Paragraph
+    doc = parse(html)
+    assert isinstance(doc.blocks[0], Image)
+    assert doc.blocks[0].caption is None  # not ALL runs italic -> no caption
+    assert isinstance(doc.blocks[1], Paragraph)
+
+
+def test_bold_only_trailing_is_not_a_caption():
+    html = (
+        '<html><head><style>.c0{font-weight:400;font-style:normal}.c1{font-weight:700}</style></head><body>'
+        '<p class="c4"><span><img src="images/imageX.png"></span>'
+        '<span class="c1">bold heading-ish</span></p>'
+        '</body></html>'
+    )
+    from src.parser import parse
+    from src.ir import Image, Paragraph
+    doc = parse(html)
+    assert doc.blocks[0].caption is None  # bold != italic, so not a caption
+    assert isinstance(doc.blocks[1], Paragraph)

@@ -31,15 +31,16 @@ def _span_style(span, italic_classes, bold_classes):
     return bold, italic
 
 
-def spans_to_runs(block, italic_classes, bold_classes):
-    """Flatten a block's <span> children into merged Run objects.
+def _merge_spans(spans, italic_classes, bold_classes):
+    """Merge an iterable of <span> tags into styled Runs.
 
     Adjacent runs with identical (bold, italic) are concatenated.
-    <br>-only spans contribute no text. Empty text is skipped.
+    Empty spans contribute nothing; whitespace-only runs are dropped
+    except a single inter-word space.
     """
     runs = []
-    for span in block.find_all("span", recursive=False):
-        text = span.get_text()  # decodes entities; a <br>-only span yields ""
+    for span in spans:
+        text = span.get_text()
         if not text:
             continue
         bold, italic = _span_style(span, italic_classes, bold_classes)
@@ -47,31 +48,25 @@ def spans_to_runs(block, italic_classes, bold_classes):
             runs[-1].text += text
         else:
             runs.append(Run(text=text, bold=bold, italic=italic))
-    # drop whitespace-only runs, but keep a single inter-word space
-    runs = [r for r in runs if r.text.strip() != "" or r.text == " "]
-    return runs
+    return [r for r in runs if r.text.strip() != "" or r.text == " "]
+
+
+def spans_to_runs(block, italic_classes, bold_classes):
+    """Flatten a block's direct-child <span> elements into merged Runs."""
+    return _merge_spans(block.find_all("span", recursive=False), italic_classes, bold_classes)
 
 
 def _trailing_runs_after_img(p, italic_classes, bold_classes):
     """Runs from spans that appear AFTER the <img> within the same <p>."""
-    runs = []
+    trailing = []
     after = False
     for span in p.find_all("span", recursive=False):
         if span.find("img") is not None:
             after = True
             continue
-        if not after:
-            continue
-        text = span.get_text()
-        if text is None or text.strip() == "":
-            continue
-        bold = any(c in bold_classes for c in span.get("class", []))
-        italic = any(c in italic_classes for c in span.get("class", []))
-        if runs and runs[-1].bold == bold and runs[-1].italic == italic:
-            runs[-1].text += text
-        else:
-            runs.append(Run(text=text, bold=bold, italic=italic))
-    return runs
+        if after:
+            trailing.append(span)
+    return _merge_spans(trailing, italic_classes, bold_classes)
 
 
 def _runs_text(runs):

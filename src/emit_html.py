@@ -30,6 +30,7 @@ def emit_body(doc):
         elif isinstance(b, Paragraph):
             parts.append(f"<p>{_runs_html(b.runs)}</p>")
         elif isinstance(b, Image):
+            # file is a basename lookup key for the adapter; intentionally not escaped
             parts.append(f"<p>[[IMG:{b.file}]]</p>")
             if b.caption:
                 cap = "".join(r.text for r in b.caption)

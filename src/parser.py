@@ -2,6 +2,8 @@
 import re
 from bs4 import BeautifulSoup
 
+from src.ir import Run
+
 
 def style_class_sets(html: str):
     """Return (italic_classes, bold_classes) by scanning the <style> block.
@@ -19,3 +21,31 @@ def style_class_sets(html: str):
         if "font-weight:700" in decls:
             bold.add(name)
     return italic, bold
+
+
+def _span_style(span, italic_classes, bold_classes):
+    classes = span.get("class", []) if hasattr(span, "get") else []
+    italic = any(c in italic_classes for c in classes)
+    bold = any(c in bold_classes for c in classes)
+    return bold, italic
+
+
+def spans_to_runs(block, italic_classes, bold_classes):
+    """Flatten a block's <span> children into merged Run objects.
+
+    Adjacent runs with identical (bold, italic) are concatenated.
+    <br>-only spans contribute no text. Empty text is skipped.
+    """
+    runs = []
+    for span in block.find_all("span", recursive=False):
+        text = span.get_text()  # decodes entities; <br> yields ""/newline
+        if text == "" or text is None:
+            continue
+        bold, italic = _span_style(span, italic_classes, bold_classes)
+        if runs and runs[-1].bold == bold and runs[-1].italic == italic:
+            runs[-1].text += text
+        else:
+            runs.append(Run(text=text, bold=bold, italic=italic))
+    # drop runs that are only whitespace produced by <br>
+    runs = [r for r in runs if r.text.strip() != "" or r.text == " "]
+    return runs

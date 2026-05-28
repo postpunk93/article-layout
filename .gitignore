@@ -9,3 +9,4 @@ __pycache__/
 .venv/
 .vc-profile/
 .pytest_cache/
+experiments/03-vc-editor/capture/

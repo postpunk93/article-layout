@@ -1,8 +1,9 @@
 # src/parser.py
+import os
 import re
 from bs4 import BeautifulSoup
 
-from src.ir import Run, Heading, Paragraph, Document
+from src.ir import Run, Heading, Paragraph, Image, Document
 
 
 def style_class_sets(html: str):
@@ -51,6 +52,28 @@ def spans_to_runs(block, italic_classes, bold_classes):
     return runs
 
 
+def _trailing_runs_after_img(p, italic_classes, bold_classes):
+    """Runs from spans that appear AFTER the <img> within the same <p>."""
+    runs = []
+    after = False
+    for span in p.find_all("span", recursive=False):
+        if span.find("img") is not None:
+            after = True
+            continue
+        if not after:
+            continue
+        text = span.get_text()
+        if text is None or text.strip() == "":
+            continue
+        bold = any(c in bold_classes for c in span.get("class", []))
+        italic = any(c in italic_classes for c in span.get("class", []))
+        if runs and runs[-1].bold == bold and runs[-1].italic == italic:
+            runs[-1].text += text
+        else:
+            runs.append(Run(text=text, bold=bold, italic=italic))
+    return runs
+
+
 def _runs_text(runs):
     return "".join(r.text for r in runs).strip()
 
@@ -63,7 +86,16 @@ def parse(html: str) -> Document:
     blocks = []
     for el in body.find_all(["h1", "h2", "p"], recursive=False):
         if el.find("img") is not None:
-            continue  # images handled in Task 6
+            img = el.find("img")
+            file = os.path.basename(img.get("src", ""))
+            trailing = _trailing_runs_after_img(el, italic_classes, bold_classes)
+            if trailing and all(r.italic for r in trailing):
+                blocks.append(Image(file=file, caption=trailing))
+            else:
+                blocks.append(Image(file=file, caption=None))
+                if trailing:
+                    blocks.append(Paragraph(runs=trailing))
+            continue
         runs = spans_to_runs(el, italic_classes, bold_classes)
         if not runs:
             continue

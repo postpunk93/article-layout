@@ -84,11 +84,16 @@ def _paste_via_clipboard(page, html, expected_blocks):
         }""",
         html,
     )
-    # Put the caret inside the body, then paste for real. Editor.js seeds one empty
-    # paragraph block on open; wait for it so we don't race the initial render.
+    # Paste INTO the body's editable, not just the block wrapper. Clicking the
+    # .ce-block wrapper does not reliably move focus off the title field, so a global
+    # Ctrl+V lands in the title; press on the editable locator, which focuses it first.
+    # Editor.js seeds one empty paragraph block on open; wait for it so we don't race
+    # the initial render.
     page.wait_for_selector(".codex-editor .ce-block", timeout=10000)
-    page.locator(".codex-editor .ce-block").first.click()
-    page.keyboard.press("Control+V")
+    editables = page.locator(".codex-editor .ce-block [contenteditable]")
+    target = editables.first if editables.count() else page.locator(".codex-editor .ce-block").first
+    target.click()
+    target.press("Control+V")
     # Wait for the pasted blocks to materialise (best-effort; mapping is validated later).
     try:
         page.wait_for_function(

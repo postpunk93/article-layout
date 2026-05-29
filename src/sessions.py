@@ -10,6 +10,8 @@ probes the live site every time.
 import json
 from pathlib import Path
 
+from src import vc_adapter, pikabu_adapter
+
 PROFILES_ROOT = Path(".profiles")
 
 
@@ -52,3 +54,23 @@ def write_meta(client: str, platform: str, updates: dict, root: Path = PROFILES_
         json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8"
     )
     return meta
+
+
+PLATFORMS = {
+    "vc": {
+        "build_document": vc_adapter.build_document,
+        "editor_url": "https://vc.ru/?modal=editor",
+        # The title field only renders inside the editor when logged in.
+        "alive_marker": 'div.editor-tool-input[data-placeholder="Заголовок"]',
+    },
+    "pikabu": {
+        "build_document": pikabu_adapter.build_document,
+        "editor_url": "https://pikabu.ru/add",
+        # The Tiptap editor body only mounts for a logged-in user.
+        "alive_marker": ".tiptap.ProseMirror",
+    },
+}
+
+
+def known_platforms() -> list[str]:
+    return sorted(PLATFORMS)

@@ -18,12 +18,9 @@ import mimetypes
 import time
 from pathlib import Path
 
-from playwright.sync_api import sync_playwright
-
 from src.emit_html import emit_body
 from src.ir import Image
 
-PROFILE_DIR = ".pikabu-profile"
 ADD_URL = "https://pikabu.ru/add"
 TITLE_SEL = 'textarea[placeholder="Заголовок"]'
 BODY_SEL = ".tiptap.ProseMirror"
@@ -227,23 +224,3 @@ def build_document(page, doc, images_dir: Path, log=print):
         log(f"Draft saved (save_draft_post {resp.value.status}). Find it at {DRAFTS_URL}")
     except Exception as e:
         log(f"Could not confirm draft save ({str(e)[:80]}); save it manually via «{SAVE_DRAFT_TEXT}».")
-
-
-def run_document(images_dir: Path, doc, keep_open=True):
-    """Launch a visible, authenticated browser and build the draft. Stops there."""
-    images_dir = Path(images_dir)
-    with sync_playwright() as p:
-        ctx = p.chromium.launch_persistent_context(
-            PROFILE_DIR, headless=False, args=["--start-maximized"], no_viewport=True
-        )
-        page = ctx.pages[0] if ctx.pages else ctx.new_page()
-        # Auth persists in the profile. If the editor doesn't open (not logged in),
-        # the wait for BODY_SEL raises with a clear error and the window stays up.
-        build_document(page, doc, images_dir)
-        print("Done — draft built. Review it in the browser, then publish manually.")
-        if keep_open:
-            try:
-                input("Press Enter here to close the browser...")
-            except EOFError:
-                time.sleep(15)
-        ctx.close()

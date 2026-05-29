@@ -13,11 +13,8 @@ Visible browser, persistent profile, STOPS at a saved draft (never publishes).
 import time
 from pathlib import Path
 
-from playwright.sync_api import sync_playwright
-
 from src.ir import Heading, Paragraph, Image, ListBlock, Quote
 
-PROFILE_DIR = ".vc-profile"
 EDITOR_URL = "https://vc.ru/?modal=editor"
 TITLE_SEL = 'div.editor-tool-input[data-placeholder="Заголовок"]'
 TOOLBOX_OPEN_SEL = ".ce-popover.ce-toolbox.opened"
@@ -220,27 +217,3 @@ def build_document(page, doc, images_dir: Path, log=print):
         log(f"Draft saved: {page.url}")
     except Exception:
         log(f"WARNING: did not detect saved-draft URL; current: {page.url}")
-
-
-def run_document(images_dir: Path, doc, keep_open=True):
-    """Launch a visible, authenticated browser and build the draft. Stops there."""
-    images_dir = Path(images_dir)
-    with sync_playwright() as p:
-        ctx = p.chromium.launch_persistent_context(
-            PROFILE_DIR, headless=False, args=["--start-maximized"], no_viewport=True
-        )
-        ctx.grant_permissions(["clipboard-read", "clipboard-write"])
-        page = ctx.pages[0] if ctx.pages else ctx.new_page()
-        # Auth persists in the profile. If the editor doesn't open (not logged
-        # in), build_document's wait for the title selector raises with a clear
-        # error and the visible window stays for inspection.
-        build_document(page, doc, images_dir)
-        print("Done — draft built. Review it in the browser and publish manually.")
-        if keep_open:
-            try:
-                input("Press Enter here to close the browser...")
-            except EOFError:
-                # No interactive stdin (e.g. launched headless from a harness):
-                # keep the window up briefly instead of closing instantly.
-                time.sleep(15)
-        ctx.close()

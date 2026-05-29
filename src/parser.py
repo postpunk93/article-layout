@@ -3,7 +3,7 @@ import os
 import re
 from bs4 import BeautifulSoup
 
-from src.ir import Run, Heading, Paragraph, Image, Document
+from src.ir import Run, Heading, Paragraph, Image, ListItem, ListBlock, Quote, Document
 
 
 def style_class_sets(html: str):
@@ -73,13 +73,29 @@ def _runs_text(runs):
     return "".join(r.text for r in runs).strip()
 
 
+def _parse_list(el, italic_classes, bold_classes):
+    """Turn a <ul>/<ol> into a ListBlock. Inline formatting preserved per item;
+    empty items dropped."""
+    items = []
+    for li in el.find_all("li", recursive=False):
+        runs = _merge_spans(li.find_all("span", recursive=False), italic_classes, bold_classes)
+        if runs:
+            items.append(ListItem(runs=runs))
+    return ListBlock(ordered=(el.name == "ol"), items=items)
+
+
 def parse(html: str) -> Document:
     italic_classes, bold_classes = style_class_sets(html)
     soup = BeautifulSoup(html, "html.parser")
     body = soup.find("body")
     title = ""
     blocks = []
-    for el in body.find_all(["h1", "h2", "p"], recursive=False):
+    for el in body.find_all(["h1", "h2", "p", "ul", "ol"], recursive=False):
+        if el.name in ("ul", "ol"):
+            lb = _parse_list(el, italic_classes, bold_classes)
+            if lb.items:
+                blocks.append(lb)
+            continue
         if el.find("img") is not None:
             img = el.find("img")
             file = os.path.basename(img.get("src", ""))

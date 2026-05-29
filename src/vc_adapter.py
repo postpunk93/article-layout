@@ -1,37 +1,32 @@
 """Drive the VC (Editor.js) editor to build a draft from a parsed Document.
 
-The editor is Editor.js. We build the body block-by-block (paste is lossy), using
-the selectors recorded in experiments/03-vc-editor/notes.md:
-- Title block:   div.editor-tool-input[data-placeholder="Заголовок"]
-- Add-block "+":  .ce-toolbar__plus  (only on an EMPTY block)
-- Toolbox items:  li.ce-toolbox__item[data-type="text|header|media|..."]
-- Image caption:  .editor-tool-input--text-sm  (per image block)
-- Saved draft:    URL gains  ?...&id=<NNN>
+VC's editor is Editor.js (a block model). Instead of typing the body block-by-block,
+we insert the whole body with ONE real clipboard paste: a real Ctrl+V (not a
+synthetic ClipboardEvent) is processed by Editor.js like a manual paste, so
+paragraphs, H2/H3 headings and bullet/ordered lists survive. What paste drops is
+restored afterwards:
+- strong/em  -> re-applied by selecting char-offset ranges and pressing Ctrl+B/I
+- quotes     -> the editor CANNOT convert a paragraph to a quote, so the paragraph
+                is emptied and a native quote block is inserted in its place
+- images     -> VC strips <img>/data-URI on paste, so the body carries [[IMG:file]]
+                marker paragraphs; each is replaced by a native upload + caption
 
-Visible browser, persistent profile, STOPS at a saved draft (never publishes).
+Block addressing uses Editor.js's per-block ``data-id`` so the i-th IR block maps to a
+unique, stable selector. Visible browser, persistent profile, STOPS at a saved draft
+(never publishes).
 """
 import time
 from pathlib import Path
 
+from src.emit_html import emit_body
 from src.ir import Heading, Paragraph, Image, ListBlock, Quote
 
 EDITOR_URL = "https://vc.ru/?modal=editor"
 TITLE_SEL = 'div.editor-tool-input[data-placeholder="Заголовок"]'
 TOOLBOX_OPEN_SEL = ".ce-popover.ce-toolbox.opened"
 CAPTION_SEL = ".editor-tool-input--text-sm"
-LIST_SEL = ".editor-list-tool"
-LIST_ORDERED_SEL = ".editor-list-tool.editor-list-tool--ordered"
-# Quote body is the multiline field; its size class flips between --text-xl
-# (empty/short) and --text-lg (longer), so match on --multiline, which is stable.
-# The author/source field is the sibling --text-sm (no --multiline) — left empty.
+# Quote body is the multiline field; match on --multiline (stable across size classes).
 QUOTE_BODY_SEL = ".editor-quote-tool .editor-tool-input--multiline"
-# The author/source field: single-line --text-sm (no --multiline). Left empty,
-# but used to EXIT the quote — Enter in the multiline body only adds a newline;
-# Enter in this single-line field leaves the block (like an image caption).
-QUOTE_AUTHOR_SEL = ".editor-quote-tool .editor-tool-input--text-sm"
-BLOCK_SETTINGS_ITEM_SEL = ".ce-block-settings__item"
-SETTINGS_TOGGLER_SEL = ".ce-block-action__settings-toggler"
-ORDERED_TUNE_LABEL = "Нумерованный"
 
 
 def format_segments(runs):
@@ -139,17 +134,26 @@ def _select_range(page, container_selector, start, end):
     )
 
 
-def _open_toolbox(page):
-    # Anchor the toolbar to the current (last) block with a REAL click first.
-    # After a list/quote the trailing empty paragraph carries a stray zero-width
-    # char and the toolbar is left stale, so the "+" opens the toolbox hidden /
-    # mispositioned. A real click repositions the toolbar to that block.
-    try:
-        page.locator(".codex-editor .ce-block").last.click()
-    except Exception:
-        pass
-    # Right after a custom block, the "+" may report as "not visible" to the
-    # normal click. Fall back to a JS click before waiting for the toolbox.
+def _block_ids(page):
+    """Editor.js tags each block wrapper with data-id; return them in document order
+    so the i-th IR block can be addressed by a unique, stable selector."""
+    return page.evaluate(
+        "() => [...document.querySelectorAll('.codex-editor .ce-block')].map(b => b.dataset.id)"
+    )
+
+
+def _block_sel(block_id):
+    """CSS selector for a specific Editor.js block by its data-id."""
+    return f'.codex-editor .ce-block[data-id="{block_id}"]'
+
+
+def _open_toolbox_on_active(page):
+    """Open the '+' toolbox for the CURRENTLY active block.
+
+    The caller must have placed the caret in the target (empty) block with a REAL
+    click first — Editor.js anchors the toolbar on real caret events. Unlike a
+    last-block-anchored open, this works for inserts in the MIDDLE of the document.
+    """
     try:
         page.click(".ce-toolbar__plus", timeout=5000)
     except Exception:
@@ -157,30 +161,64 @@ def _open_toolbox(page):
     page.wait_for_selector(TOOLBOX_OPEN_SEL, timeout=5000)
 
 
-def _insert_heading(page, runs, level):
-    _open_toolbox(page)
-    # Header toolbox items, in document order: [0]="Подзаголовок H2", [1]="Подзаголовок H3".
-    idx = 0 if level <= 2 else 1
-    page.eval_on_selector_all(
-        '.ce-toolbox__item[data-type="header"]', f"els => els[{idx}].click()"
+def _format_list_items(page, block_id, list_block):
+    """Re-apply strong/em inside each <li> of a pasted list block (per-item offsets)."""
+    for k, item in enumerate(list_block.items):
+        li_sel = _block_sel(block_id) + f" li:nth-of-type({k + 1})"
+        for (s, e, b, it) in format_segments(item.runs):
+            if _select_range(page, li_sel, s, e):
+                if b:
+                    page.keyboard.press("Control+b")
+                if it:
+                    page.keyboard.press("Control+i")
+
+
+def _replace_paragraph_with_quote(page, block_id, quote):
+    """Empty the paragraph at block_id and insert a native quote block in its place.
+
+    The editor cannot convert a paragraph to a quote, so we clear the paragraph and
+    build a quote block on the now-empty active block, typing the runs (which carries
+    bold/italic inline). Deleting one paragraph and inserting one quote keeps the
+    overall block count unchanged.
+    """
+    page.locator(_block_sel(block_id) + " [contenteditable]").first.click()
+    page.keyboard.press("Control+a")
+    page.keyboard.press("Delete")
+    _open_toolbox_on_active(page)
+    page.eval_on_selector('.ce-toolbox__item[data-type="quote"]', "el => el.click()")
+    page.wait_for_selector(QUOTE_BODY_SEL, state="attached", timeout=8000)
+    page.locator(QUOTE_BODY_SEL).last.click(force=True)
+    _type_runs(page, quote.runs)
+    time.sleep(0.3)
+
+
+def _replace_marker_with_image(page, block, path, log):
+    """Find the [[IMG:file]] marker paragraph, empty it, and upload a native image in
+    its place (VC strips <img>/data-URI on paste). The caption goes into the image
+    block's native caption field."""
+    needle = f"[[IMG:{block.file}]]"
+    idx = page.evaluate(
+        """(needle) => {
+            const blocks = [...document.querySelectorAll('.codex-editor .ce-block')];
+            return blocks.findIndex(el => (el.innerText || '').includes(needle));
+        }""",
+        needle,
     )
-    time.sleep(0.4)
-    _type_runs(page, runs)
-
-
-def _insert_image(page, image_path, caption_runs):
-    # Count existing images so we can wait for THIS upload to actually land.
+    if idx < 0:
+        log(f"  marker {needle} not found — skipping")
+        return
+    block_loc = page.locator(".codex-editor .ce-block").nth(idx)
+    block_loc.locator("[contenteditable]").first.click()  # anchor toolbar to this block
+    page.keyboard.press("Control+a")
+    page.keyboard.press("Delete")                          # empty the marker paragraph
+    _open_toolbox_on_active(page)
     n_before = page.evaluate(
         "() => document.querySelectorAll('.codex-editor .ce-block img').length"
     )
-    _open_toolbox(page)
     with page.expect_file_chooser(timeout=10000) as fc:
         page.eval_on_selector('.ce-toolbox__item[data-type="media"]', "el => el.click()")
-    fc.value.set_files(str(image_path))
-    # CRITICAL: image upload is async. Wait until a NEW image block exists and its
-    # <img> has finished loading a real http(s) src. Without this, subsequent
-    # paragraphs are typed while the upload is in flight and the image lands at the
-    # moved caret — scrambling block order in image-dense regions.
+    fc.value.set_files(str(path))
+    # Upload is async — wait for a NEW image that has a real http(s) src.
     page.wait_for_function(
         """(n) => {
             const imgs = document.querySelectorAll('.codex-editor .ce-block img');
@@ -192,71 +230,10 @@ def _insert_image(page, image_path, caption_runs):
         arg=n_before,
         timeout=60000,
     )
-    # Caption belongs to the just-added (now last) image block.
-    page.locator(CAPTION_SEL).last.click()
-    if caption_runs:
-        page.keyboard.type("".join(r.text for r in caption_runs))
-
-
-def _insert_list(page, list_block, is_last=False):
-    _open_toolbox(page)
-    page.eval_on_selector('.ce-toolbox__item[data-type="list"]', "el => el.click()")
-    page.wait_for_selector(LIST_SEL, timeout=8000)
-    # type items; Enter starts a new <li>. No trailing Enter after the last item yet.
-    for idx, item in enumerate(list_block.items):
-        if idx:
-            page.keyboard.press("Enter")
-        _type_runs(page, item.runs)
-    # ordered? toggle via the block settings gear -> ORDERED_TUNE_LABEL tune.
-    # CRITICAL: target the LAST list in the DOM (the one we just built). Earlier
-    # lists also match LIST_SEL, and eval_on_selector picks the FIRST — which
-    # would toggle the wrong list (swapping ordered/unordered between lists).
-    if list_block.ordered:
-        # open the settings gear of the LAST (current) list block
-        gear_click = (
-            "els => els[els.length - 1].closest('.ce-block')"
-            f".querySelector('{SETTINGS_TOGGLER_SEL}').click()"
-        )
-        page.eval_on_selector_all(LIST_SEL, gear_click)
-        page.wait_for_selector(BLOCK_SETTINGS_ITEM_SEL, timeout=5000)
-        page.eval_on_selector_all(
-            BLOCK_SETTINGS_ITEM_SEL,
-            f"els => {{ const it = els.find(e => (e.innerText||'').includes('{ORDERED_TUNE_LABEL}')); if (it) it.click(); }}",
-        )
-        # confirm the modifier class applied on the last list, then close the
-        # tune popover. NOTE: Escape here closes the whole VC editor modal —
-        # instead click the settings gear again to toggle just the popover shut.
-        page.wait_for_selector(LIST_ORDERED_SEL, timeout=5000)
-        page.eval_on_selector_all(LIST_SEL, gear_click)
-        # Re-focus the last <li> with a REAL click (not a JS selection): Editor.js
-        # only repositions its toolbar on real caret events, so a JS focus would
-        # leave the toolbar stale and the next block's "+" hidden. End puts the
-        # caret at the line end so the exit double-Enter reliably leaves the block.
-        page.locator(f"{LIST_ORDERED_SEL} li").last.click()
-        page.keyboard.press("End")
-    # exit the list into a fresh paragraph block below (double-Enter on empty item).
-    # Skip when this is the last block, or we'd leave a trailing empty paragraph.
-    if not is_last:
-        page.keyboard.press("Enter")
-        page.keyboard.press("Enter")
-    time.sleep(0.3)
-
-
-def _insert_quote(page, quote, is_last=False):
-    _open_toolbox(page)
-    page.eval_on_selector('.ce-toolbox__item[data-type="quote"]', "el => el.click()")
-    # The empty body field has zero height until focused, so wait for it to be
-    # ATTACHED (not "visible") and click with force to bypass the visibility check.
-    page.wait_for_selector(QUOTE_BODY_SEL, state="attached", timeout=8000)
-    page.locator(QUOTE_BODY_SEL).last.click(force=True)
-    _type_runs(page, quote.runs)   # author field left empty
-    # exit the quote into a fresh paragraph block below. The body is multiline,
-    # so Enter there only adds a newline; instead focus the single-line author
-    # field (left empty) and press Enter, which leaves the block. Skip when this
-    # is the last block, or we'd leave a trailing empty paragraph.
-    if not is_last:
-        page.locator(QUOTE_AUTHOR_SEL).last.click(force=True)
-        page.keyboard.press("Enter")
+    log(f"  image: {block.file} caption={'yes' if block.caption else 'no'}")
+    if block.caption:
+        block_loc.locator(CAPTION_SEL).first.click()
+        page.keyboard.type("".join(r.text for r in block.caption))
     time.sleep(0.3)
 
 
@@ -269,40 +246,53 @@ def build_document(page, doc, images_dir: Path, log=print):
     log(f"Title: {doc.title!r}")
     page.click(TITLE_SEL)
     page.keyboard.type(doc.title)
-    page.keyboard.press("Enter")  # move into the body (creates first empty block)
-    time.sleep(0.5)
+    time.sleep(0.3)
 
-    last = len(doc.blocks) - 1
-    for i, block in enumerate(doc.blocks):
-        if isinstance(block, Heading):
-            log(f"[{i}] heading: {''.join(r.text for r in block.runs)[:50]!r}")
-            _insert_heading(page, block.runs, block.level)
-        elif isinstance(block, Paragraph):
-            log(f"[{i}] paragraph ({len(block.runs)} runs)")
-            _type_runs(page, block.runs)
-        elif isinstance(block, Image):
-            path = images_dir / block.file
-            if not path.exists():
-                log(f"[{i}] IMAGE MISSING ON DISK: {path} — pausing")
-                input("Fix the image then press Enter to continue...")
-            log(f"[{i}] image: {block.file} caption={'yes' if block.caption else 'no'}")
-            _insert_image(page, path, block.caption)
-        elif isinstance(block, ListBlock):
-            log(f"[{i}] list ordered={block.ordered} items={len(block.items)}")
-            _insert_list(page, block, is_last=(i == last))
-        elif isinstance(block, Quote):
-            log(f"[{i}] quote ({len(block.runs)} runs)")
-            _insert_quote(page, block, is_last=(i == last))
-        # Enter creates the next empty block (needed for the next heading/image's
-        # toolbox, and to leave an image's caption). Skip it after the last block
-        # so we don't leave a trailing empty paragraph. List/Quote ALREADY exit
-        # into a fresh paragraph below (double-Enter), so skip the generic Enter
-        # for them or we'd leave an extra empty block.
-        if i < last and not isinstance(block, (ListBlock, Quote)):
-            page.keyboard.press("Enter")
-        time.sleep(0.3)
+    # 1. Paste the whole structure (quotes as <p>, images as [[IMG:file]] markers).
+    body_html = emit_body(doc, caption_marker=False, quote_as_paragraph=True)
+    log("Pasting body via real clipboard…")
+    _paste_via_clipboard(page, body_html, expected_blocks=len(doc.blocks))
+    time.sleep(0.8)
 
-    # Confirm the draft saved (URL gains an id=NNN).
+    # 2. Validate the 1:1 block mapping.
+    ids = _block_ids(page)
+    positional_ok = len(ids) == len(doc.blocks)
+    if not positional_ok:
+        log(f"WARNING: block mapping off (expected {len(doc.blocks)}, got {len(ids)}); "
+            f"skipping strong/em + quote passes — fix those by hand.")
+
+    # 3a. Re-apply strong/em for non-reinserted blocks (paragraph/heading/list).
+    if positional_ok:
+        for i, block in enumerate(doc.blocks):
+            if isinstance(block, (Heading, Paragraph)):
+                sel = _block_sel(ids[i]) + " [contenteditable]"
+                for (s, e, b, it) in format_segments(block.runs):
+                    if _select_range(page, sel, s, e):
+                        if b:
+                            page.keyboard.press("Control+b")
+                        if it:
+                            page.keyboard.press("Control+i")
+            elif isinstance(block, ListBlock):
+                _format_list_items(page, ids[i], block)
+
+    # 3b. Quotes: empty the paragraph at its position, insert a native quote block.
+    if positional_ok:
+        for i, block in enumerate(doc.blocks):
+            if isinstance(block, Quote):
+                log(f"[{i}] quote -> native quote block")
+                _replace_paragraph_with_quote(page, ids[i], block)
+
+    # 4. Images last (matched by marker content; conversion keeps block count).
+    images = [b for b in doc.blocks if isinstance(b, Image)]
+    log(f"Uploading {len(images)} image(s)…")
+    for block in images:
+        path = images_dir / block.file
+        if not path.exists():
+            log(f"  IMAGE MISSING ON DISK: {path} — leaving marker [[IMG:{block.file}]]")
+            continue
+        _replace_marker_with_image(page, block, path, log)
+
+    # 5. Confirm the draft saved (URL gains an id=NNN).
     try:
         page.wait_for_function("() => location.href.includes('id=')", timeout=15000)
         log(f"Draft saved: {page.url}")

@@ -1,7 +1,5 @@
-out/
 in/*/
 !in/.gitkeep
-experiments/**/test.html
 .claude/settings.local.json
 node_modules/
 __pycache__/
@@ -10,4 +8,3 @@ __pycache__/
 .vc-profile/
 .pikabu-profile/
 .pytest_cache/
-experiments/03-vc-editor/capture/

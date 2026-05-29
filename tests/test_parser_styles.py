@@ -19,7 +19,7 @@ def test_style_class_sets_finds_italic_and_bold():
 # append to tests/test_parser_styles.py
 from pathlib import Path
 
-EXAMPLE = Path("example/170/index.html").read_text(encoding="utf-8")
+EXAMPLE = Path("tests/fixtures/170/index.html").read_text(encoding="utf-8")
 
 
 def test_style_class_sets_on_real_example():

@@ -1,8 +1,0 @@
-{
-  "image_file": "C:\\Projects\\article-layout\\example\\lists-quotes\\images\\image1.png",
-  "photo_button_found": true,
-  "file_chooser": "ERROR: Timeout 8000ms exceeded while waiting for event \"filechooser\"\n=========================== logs ===========================\nwaiting for event \"filechoo",
-  "upload": "ERROR/timeout: Page.wait_for_function: Timeout 60000ms exceeded.",
-  "image_block": null,
-  "caption_candidates": []
-}

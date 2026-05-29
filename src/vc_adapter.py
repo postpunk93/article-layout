@@ -15,7 +15,7 @@ from pathlib import Path
 
 from playwright.sync_api import sync_playwright
 
-from src.ir import Heading, Paragraph, Image
+from src.ir import Heading, Paragraph, Image, ListBlock, Quote
 
 PROFILE_DIR = ".vc-profile"
 EDITOR_URL = "https://vc.ru/?modal=editor"
@@ -39,7 +39,12 @@ def _type_runs(page, runs):
 
 
 def _open_toolbox(page):
-    page.click(".ce-toolbar__plus", timeout=5000)
+    # Right after a custom block, the "+" may report as "not visible" to the
+    # normal click. Fall back to a JS click before waiting for the toolbox.
+    try:
+        page.click(".ce-toolbar__plus", timeout=5000)
+    except Exception:
+        page.eval_on_selector(".ce-toolbar__plus", "el => el.click()")
     page.wait_for_selector(TOOLBOX_OPEN_SEL, timeout=5000)
 
 
@@ -83,6 +88,50 @@ def _insert_image(page, image_path, caption_runs):
         page.keyboard.type("".join(r.text for r in caption_runs))
 
 
+def _insert_list(page, list_block):
+    _open_toolbox(page)
+    page.eval_on_selector('.ce-toolbox__item[data-type="list"]', "el => el.click()")
+    time.sleep(0.4)
+    # type items; Enter starts a new <li>. No trailing Enter after the last item yet.
+    for idx, item in enumerate(list_block.items):
+        if idx:
+            page.keyboard.press("Enter")
+        _type_runs(page, item.runs)
+    # ordered? toggle via the block settings gear -> "Нумерованный" tune.
+    if list_block.ordered:
+        page.eval_on_selector(
+            ".editor-list-tool",
+            "el => el.closest('.ce-block').querySelector('.ce-block-action__settings-toggler').click()",
+        )
+        page.wait_for_selector(".ce-block-settings__item", timeout=5000)
+        page.eval_on_selector_all(
+            ".ce-block-settings__item",
+            "els => { const it = els.find(e => (e.innerText||'').includes('Нумерованный')); if (it) it.click(); }",
+        )
+        # confirm the modifier class applied, then close the tune popover
+        page.wait_for_selector(".editor-list-tool.editor-list-tool--ordered", timeout=5000)
+        page.keyboard.press("Escape")
+        time.sleep(0.2)
+        page.locator(".editor-list-tool").last.click()  # re-focus the list
+    # exit the list into a fresh paragraph block below (double-Enter on empty item)
+    page.keyboard.press("End")
+    page.keyboard.press("Enter")
+    page.keyboard.press("Enter")
+    time.sleep(0.3)
+
+
+def _insert_quote(page, quote):
+    _open_toolbox(page)
+    page.eval_on_selector('.ce-toolbox__item[data-type="quote"]', "el => el.click()")
+    time.sleep(0.4)
+    page.locator(".editor-quote-tool .editor-tool-input--text-lg").last.click()
+    _type_runs(page, quote.runs)   # author field (.--text-sm) left empty
+    # exit the quote into a fresh paragraph block below
+    page.keyboard.press("Enter")
+    page.keyboard.press("Enter")
+    time.sleep(0.3)
+
+
 def build_document(page, doc, images_dir: Path, log=print):
     log(f"Opening editor: {EDITOR_URL}")
     page.goto(EDITOR_URL)
@@ -110,10 +159,18 @@ def build_document(page, doc, images_dir: Path, log=print):
                 input("Fix the image then press Enter to continue...")
             log(f"[{i}] image: {block.file} caption={'yes' if block.caption else 'no'}")
             _insert_image(page, path, block.caption)
+        elif isinstance(block, ListBlock):
+            log(f"[{i}] list ordered={block.ordered} items={len(block.items)}")
+            _insert_list(page, block)
+        elif isinstance(block, Quote):
+            log(f"[{i}] quote ({len(block.runs)} runs)")
+            _insert_quote(page, block)
         # Enter creates the next empty block (needed for the next heading/image's
         # toolbox, and to leave an image's caption). Skip it after the last block
-        # so we don't leave a trailing empty paragraph.
-        if i < last:
+        # so we don't leave a trailing empty paragraph. List/Quote ALREADY exit
+        # into a fresh paragraph below (double-Enter), so skip the generic Enter
+        # for them or we'd leave an extra empty block.
+        if i < last and not isinstance(block, (ListBlock, Quote)):
             page.keyboard.press("Enter")
         time.sleep(0.3)
 

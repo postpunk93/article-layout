@@ -101,3 +101,68 @@ Ran `vc_adapter.build_document` on the parsed `example/index.html`:
 - Re-verified on the full article: **block order matches the IR exactly (diffs=0, 69
   blocks).**
 Verdict: per-block adapter works end-to-end on the real article, order-correct.
+
+## Lists & Quotes (discovered 2026-05-29, Task 6)
+
+Probe scripts: `experiments/03-vc-editor/probe_*.py` (run from repo root). Live
+findings captured in `experiments/03-vc-editor/capture/v*.{html,png}`.
+
+### LIST tool (`data-type="list"`)
+- A list is a SINGLE contenteditable element, NOT one Editor.js block per item:
+  `<ul class="editor-list-tool" contenteditable="true"><li>item</li>…</ul>`.
+- Items: type text, press **Enter** to start the next `<li>`. (Inline bold/italic
+  via Ctrl+B / Ctrl+I as elsewhere.)
+- **Ordered vs unordered**: the default insert is UNORDERED. Ordered uses the SAME
+  `<ul>` element with an extra modifier class: `editor-list-tool--ordered`
+  (renders "1. 2. 3."). Confirmed visually (`capture/v7_after.png`) and in DOM
+  (`capture/v7_after.html`): `<ul class="editor-list-tool editor-list-tool--ordered">`.
+- **To set ordered**: open the block's settings gear, then click the numbered tune:
+  - Gear (per block, bypass hover with a JS click):
+    `block.querySelector('.ce-block-action__settings-toggler').click()`
+    where `block = ul.closest('.ce-block')`.
+  - Tune popover items are `.ce-block-settings__item`. The list plugin shows two:
+    **`Обычный`** (active = bulleted) and **`Нумерованный`** (numbered). Click the
+    one whose innerText contains `Нумерованный`. The block re-renders to ordered;
+    re-focus the `<ul>` before continuing (the tune popover stays open — close via
+    Escape or by clicking back into the list).
+- **Exit the list**: with the caret at the end of the last `<li>`, press **Enter**
+  on an empty item (double-Enter) to drop out into a fresh paragraph block below.
+
+### QUOTE tool (`data-type="quote"`)
+- Block markup: `<div class="editor-quote-tool">` containing TWO contenteditable
+  fields:
+  - **Body** (where the quote text goes): the multiline field. SUPERSEDED during
+    the adapter build — its size class flips between `--text-xl` (empty/short) and
+    `--text-lg` (longer), so match on the stable `--multiline`:
+    `.editor-quote-tool .editor-tool-input--multiline`. It wraps typed text in `<p>`.
+  - **Author/source**: `.editor-quote-tool .editor-tool-input--text-sm`
+    (placeholder "Источник"). LEAVE EMPTY — GDoc has no author concept.
+    (NB: `--text-sm` is the same class used by an image caption; scope by
+    `.editor-quote-tool` to disambiguate.)
+- After inserting, focus the body field and type. The body is multiline, so Enter
+  there only inserts a newline INSIDE the quote — it does NOT exit. SUPERSEDED:
+  to leave the quote, focus the single-line author (`--text-sm`) field and press
+  Enter (like an image caption); the author stays empty. (The earlier double-Enter
+  hypothesis was wrong — it just stacks `<p>` newlines and absorbs the next block.)
+
+### Block settings gear (general)
+- The per-block gear is `.ce-block-action__settings-toggler` (inside
+  `.ce-block__actions`), NOT `.ce-toolbar__settings-btn`. Only visible on hover, so
+  trigger it with a JS `el.click()`.
+
+### Toolbox "+" after a custom block — CAUTION
+- `page.click('.ce-toolbar__plus')` sometimes reports the "+" as "not visible"
+  right after inserting a custom (list/quote) block. A JS fallback works:
+  `page.eval_on_selector('.ce-toolbar__plus', 'el => el.click()')`. The adapter's
+  toolbox opener should try the normal click, then fall back to the JS click.
+
+### Adapter implications (for Task 7)
+- `_insert_list`: open toolbox → click `data-type="list"` → type items with Enter
+  between them (no trailing Enter) → if ordered, gear → click `Нумерованный` tune →
+  re-focus the list → double-Enter to exit. Since the method itself exits into the
+  next empty block, the build loop must NOT add its own trailing Enter after a list.
+- `_insert_quote`: open toolbox → click `data-type="quote"` → focus
+  `.editor-tool-input--text-lg` → type body (author left empty) → double-Enter to
+  exit. Same trailing-Enter caveat as lists.
+- Verify the exact exit/`+` behavior during the live Task 8 run; prefer
+  `wait_for_*` predicates over sleeps if anything proves async.

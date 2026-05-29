@@ -3,7 +3,7 @@ from pathlib import Path
 from src.parser import parse
 from src.ir import Image, Heading, Paragraph
 
-doc = parse(Path("example/index.html").read_text(encoding="utf-8"))
+doc = parse(Path("example/170/index.html").read_text(encoding="utf-8"))
 
 
 def test_title_extracted():

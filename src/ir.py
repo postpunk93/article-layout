@@ -27,6 +27,22 @@ class Image:
 
 
 @dataclass
+class ListItem:
+    runs: list[Run] = field(default_factory=list)
+
+
+@dataclass
+class ListBlock:
+    ordered: bool
+    items: list[ListItem] = field(default_factory=list)
+
+
+@dataclass
+class Quote:
+    runs: list[Run] = field(default_factory=list)
+
+
+@dataclass
 class Document:
     title: str
-    blocks: list["Heading | Paragraph | Image"] = field(default_factory=list)
+    blocks: list["Heading | Paragraph | Image | ListBlock | Quote"] = field(default_factory=list)

@@ -6,17 +6,23 @@ from bs4 import BeautifulSoup
 from src.ir import Run, Heading, Paragraph, Image, ListItem, ListBlock, Quote, Document
 
 
+def _iter_class_rules(html: str):
+    """Yield (class_name, whitespace-stripped rule body) for each .cN{...} rule
+    across all <style> blocks."""
+    soup = BeautifulSoup(html, "html.parser")
+    css = "\n".join(s.get_text() for s in soup.find_all("style"))
+    for name, body in re.findall(r"\.(c\d+)\s*\{([^}]*)\}", css):
+        yield name, re.sub(r"\s+", "", body)
+
+
 def style_class_sets(html: str):
     """Return (italic_classes, bold_classes) by scanning the <style> block.
 
     A class is italic if its rule contains font-style:italic.
     A class is bold if its rule contains font-weight:700.
     """
-    soup = BeautifulSoup(html, "html.parser")
-    css = "\n".join(s.get_text() for s in soup.find_all("style"))
     italic, bold = set(), set()
-    for name, body in re.findall(r"\.(c\d+)\s*\{([^}]*)\}", css):
-        decls = re.sub(r"\s+", "", body)
+    for name, decls in _iter_class_rules(html):
         if "font-style:italic" in decls:
             italic.add(name)
         if "font-weight:700" in decls:
@@ -26,11 +32,9 @@ def style_class_sets(html: str):
 
 def yellow_class_set(html: str):
     """Return the set of CSS classes whose rule sets background-color:#ffff00."""
-    soup = BeautifulSoup(html, "html.parser")
-    css = "\n".join(s.get_text() for s in soup.find_all("style"))
     yellow = set()
-    for name, body in re.findall(r"\.(c\d+)\s*\{([^}]*)\}", css):
-        if "background-color:#ffff00" in re.sub(r"\s+", "", body):
+    for name, decls in _iter_class_rules(html):
+        if "background-color:#ffff00" in decls:
             yellow.add(name)
     return yellow
 

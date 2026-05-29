@@ -29,6 +29,14 @@ def test_partial_yellow_paragraph_stays_paragraph():
     assert isinstance(doc.blocks[0], Paragraph)
 
 
+def test_yellow_quote_with_inter_run_space_span_stays_quote():
+    html = f"<html><head><style>{STYLE}</style></head><body>" \
+           '<p class="c3"><span class="c0 c10">first</span>' \
+           '<span class="c0"> </span>' \
+           '<span class="c0 c10">second</span></p></body></html>'
+    assert isinstance(parse(html).blocks[0], Quote)
+
+
 def test_non_yellow_highlight_is_not_a_quote():
     html = f"<html><head><style>{STYLE}</style></head><body>" \
            '<p class="c3"><span class="c0 c13">blue</span></p></body></html>'

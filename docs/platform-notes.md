@@ -49,11 +49,25 @@ contenteditable. Heading levels are encoded in a class (`editor-header-tool--h2`
   "bold"|"italic"|"link"]`; Ctrl+B / Ctrl+I toggles also work while typing.
 - **Publish (DO NOT click)**: `button.button--type-primary` («Опубликовать»).
 
-### Body approach — per-block typing (paste is lossy)
-Clipboard paste into VC strips `<strong>/<em>` and drops marker/following paragraphs,
-so the adapter builds the body **block by block** from the IR (not via `emit_html`
-markers): title → typed; paragraph → typed with Ctrl+B/I per run; heading → empty
-block → "+" → header item by level → type; image → upload flow below.
+### Body approach — real-clipboard paste + restore passes
+A **real** `Ctrl+V` from the OS clipboard is processed by Editor.js like a manual
+paste (unlike a synthetic `ClipboardEvent`, which dropped paragraphs), so paragraphs,
+H2/H3 headings and bullet/ordered lists survive a single paste. The adapter therefore
+pastes the whole body once (HTML from `emit_body(doc, caption_marker=False,
+quote_as_paragraph=True)`: quotes as `<p>`, images as `[[IMG:file]]` markers — put on
+the real clipboard via an offscreen `contenteditable` + `execCommand('copy')`), then
+restores what paste drops:
+- **strong/em** — reapplied by selecting each run's char-offset range and pressing
+  Ctrl+B/Ctrl+I (blocks addressed by Editor.js `data-id`).
+- **quotes** — the editor CANNOT convert a paragraph to a quote, so the paragraph is
+  emptied (Ctrl+A, Delete) and a native quote block is inserted in its place.
+- **images** — VC strips `<img>`/data-URI on paste, so each `[[IMG:file]]` marker is
+  replaced by a native upload (file chooser) with the caption typed into the image
+  block's own caption field.
+
+Mapping check: after paste, the adapter compares the `.ce-block` count to the IR block
+count; on mismatch it logs a warning and skips the strong/em + quote passes (images
+still run, matched by marker content).
 
 ### Image insertion (confirmed)
 1. Ensure an empty active block (press Enter).

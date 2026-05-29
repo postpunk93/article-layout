@@ -1,0 +1,220 @@
+{
+  "toolbar_buttons": [
+    {
+      "i": 0,
+      "attrs": {
+        "type": "button",
+        "class": "pkb-control-btn__host--JF26HTaH editor-menu__button--dVmfe_cZ",
+        "disabled": "",
+        "tabindex": "-1",
+        "data-test": "editor-ctrl-heading"
+      },
+      "title": null,
+      "ariaLabel": null,
+      "html": "<svg xmlns=\"http://www.w3.org/2000/svg\" class=\"pkb-icon__host--RM9zRTSM\" width=\"16\" height=\"16\"><use xlink:href=\"#icon--ui__heading_16\"></use></svg>"
+    },
+    {
+      "i": 1,
+      "attrs": {
+        "type": "button",
+        "class": "pkb-control-btn__host--JF26HTaH editor-menu__button--dVmfe_cZ",
+        "disabled": "",
+        "tabindex": "-1",
+        "data-test": "editor-ctrl-bold"
+      },
+      "title": null,
+      "ariaLabel": null,
+      "html": "<svg xmlns=\"http://www.w3.org/2000/svg\" class=\"pkb-icon__host--RM9zRTSM\" width=\"16\" height=\"16\"><use xlink:href=\"#icon--ui__bold_16\"></use></svg>"
+    },
+    {
+      "i": 2,
+      "attrs": {
+        "type": "button",
+        "class": "pkb-control-btn__host--JF26HTaH editor-menu__button--dVmfe_cZ",
+        "disabled": "",
+        "tabindex": "-1",
+        "data-test": "editor-ctrl-italic"
+      },
+      "title": null,
+      "ariaLabel": null,
+      "html": "<svg xmlns=\"http://www.w3.org/2000/svg\" class=\"pkb-icon__host--RM9zRTSM\" width=\"16\" height=\"16\"><use xlink:href=\"#icon--ui__italic_16\"></use></svg>"
+    },
+    {
+      "i": 3,
+      "attrs": {
+        "type": "button",
+        "class": "pkb-control-btn__host--JF26HTaH editor-menu__button--dVmfe_cZ",
+        "disabled": "",
+        "tabindex": "-1",
+        "data-test": "editor-ctrl-strike"
+      },
+      "title": null,
+      "ariaLabel": null,
+      "html": "<svg xmlns=\"http://www.w3.org/2000/svg\" class=\"pkb-icon__host--RM9zRTSM\" width=\"16\" height=\"16\"><use xlink:href=\"#icon--ui__strikethrough_16\"></use></svg>"
+    },
+    {
+      "i": 4,
+      "attrs": {
+        "type": "button",
+        "class": "pkb-control-btn__host--JF26HTaH editor-menu__button--dVmfe_cZ",
+        "disabled": "",
+        "tabindex": "-1",
+        "data-test": "editor-ctrl-link"
+      },
+      "title": null,
+      "ariaLabel": null,
+      "html": "<svg xmlns=\"http://www.w3.org/2000/svg\" class=\"pkb-icon__host--RM9zRTSM\" width=\"16\" height=\"16\"><use xlink:href=\"#icon--ui__link_16\"></use></svg>"
+    },
+    {
+      "i": 5,
+      "attrs": {
+        "type": "button",
+        "class": "pkb-control-btn__host--JF26HTaH editor-menu__button--dVmfe_cZ",
+        "disabled": "",
+        "tabindex": "-1",
+        "data-test": "editor-ctrl-quote"
+      },
+      "title": null,
+      "ariaLabel": null,
+      "html": "<svg xmlns=\"http://www.w3.org/2000/svg\" class=\"pkb-icon__host--RM9zRTSM\" width=\"16\" height=\"16\"><use xlink:href=\"#icon--ui__quote_16\"></use></svg>"
+    },
+    {
+      "i": 6,
+      "attrs": {
+        "type": "button",
+        "class": "pkb-control-btn__host--JF26HTaH editor-menu__button--dVmfe_cZ",
+        "disabled": "",
+        "tabindex": "-1",
+        "data-test": "editor-ctrl-highlight"
+      },
+      "title": null,
+      "ariaLabel": null,
+      "html": "<svg xmlns=\"http://www.w3.org/2000/svg\" class=\"pkb-icon__host--RM9zRTSM\" width=\"16\" height=\"16\"><use xlink:href=\"#icon--ui__text-block_16\"></use></svg>"
+    },
+    {
+      "i": 7,
+      "attrs": {
+        "type": "button",
+        "class": "pkb-control-btn__host--JF26HTaH editor-menu__button--dVmfe_cZ",
+        "disabled": "",
+        "tabindex": "-1",
+        "data-test": "editor-ctrl-marker"
+      },
+      "title": null,
+      "ariaLabel": null,
+      "html": "<svg xmlns=\"http://www.w3.org/2000/svg\" class=\"pkb-icon__host--RM9zRTSM\" width=\"16\" height=\"16\"><use xlink:href=\"#icon--ui__highlight_16\"></use></svg>"
+    },
+    {
+      "i": 8,
+      "attrs": {
+        "type": "button",
+        "class": "pkb-control-btn__host--JF26HTaH editor-menu__button--dVmfe_cZ",
+        "disabled": "",
+        "tabindex": "-1",
+        "data-test": "editor-ctrl-spoiler"
+      },
+      "title": null,
+      "ariaLabel": null,
+      "html": "<svg xmlns=\"http://www.w3.org/2000/svg\" class=\"pkb-icon__host--RM9zRTSM\" width=\"16\" height=\"16\"><use xlink:href=\"#icon--ui__eye_hide_16\"></use></svg>"
+    },
+    {
+      "i": 9,
+      "attrs": {
+        "type": "button",
+        "class": "pkb-control-btn__host--JF26HTaH editor-menu__button--dVmfe_cZ editor-menu__button_separated--QDDR0374",
+        "disabled": "",
+        "tabindex": "-1",
+        "data-test": "editor-ctrl-ul"
+      },
+      "title": null,
+      "ariaLabel": null,
+      "html": "<svg xmlns=\"http://www.w3.org/2000/svg\" class=\"pkb-icon__host--RM9zRTSM\" width=\"16\" height=\"16\"><use xlink:href=\"#icon--ui__list_format_16\"></use></svg>"
+    },
+    {
+      "i": 10,
+      "attrs": {
+        "type": "button",
+        "class": "pkb-control-btn__host--JF26HTaH editor-menu__button--dVmfe_cZ",
+        "disabled": "",
+        "tabindex": "-1",
+        "data-test": "editor-ctrl-ol"
+      },
+      "title": null,
+      "ariaLabel": null,
+      "html": "<svg xmlns=\"http://www.w3.org/2000/svg\" class=\"pkb-icon__host--RM9zRTSM\" width=\"16\" height=\"16\"><use xlink:href=\"#icon--ui__number_list_16\"></use></svg>"
+    },
+    {
+      "i": 11,
+      "attrs": {
+        "type": "button",
+        "class": "pkb-control-btn__host--JF26HTaH editor-menu__button--dVmfe_cZ editor-menu__button_separated--QDDR0374",
+        "disabled": "",
+        "tabindex": "-1",
+        "data-test": "editor-ctrl-dnd-start"
+      },
+      "title": null,
+      "ariaLabel": null,
+      "html": "<svg xmlns=\"http://www.w3.org/2000/svg\" class=\"pkb-icon__host--RM9zRTSM\" width=\"16\" height=\"16\"><use xlink:href=\"#icon--ui__move_20\"></use></svg>"
+    }
+  ],
+  "floating_menu": [
+    {
+      "attrs": {
+        "type": "button",
+        "class": "floating-menu-view__button--HzqgG6Ir"
+      },
+      "html": "<svg xmlns=\"http://www.w3.org/2000/svg\" class=\"pkb-icon__host--RM9zRTSM\" width=\"8\" height=\"8\"><use xlink:href=\"#icon--ui__add_8\"></use></svg>"
+    }
+  ],
+  "body_html_after_typing": "<div class=\"node-wrapper-view__host--x6bdZ_Cf\" data-node-view-wrapper=\"\" data-focus=\"false\" style=\"white-space: normal;\"><!--v-if--><div><div class=\"node-wrapper-view__dragHandleWrapper--SnnuCPei\" contenteditable=\"false\"><div class=\"node-wrapper-view__button--QFFfYqkA\" draggable=\"true\" data-drag-handle=\"\"><svg xmlns=\"http://www.w3.org/2000/svg\" class=\"pkb-icon__host--RM9zRTSM\" width=\"16\" height=\"16\"><use xlink:href=\"#icon--ui__sorting-burger_16\"></use></svg></div></div></div><div class=\"node-wrapper-view__content--YBpn9eXj\"><p data-node-view-content=\"\" class=\"node-paragraph-view__content--hRxcjf1f\" style=\"white-space: pre-wrap;\">normal <b>bold</b> <i>italic</i></p></div></div><div class=\"node-wrapper-view__host--x6bdZ_Cf\" data-node-view-wrapper=\"\" data-focus=\"false\" style=\"white-space: normal;\"><!--v-if--><div><!--v-if--></div><div class=\"node-wrapper-view__content--YBpn9eXj\"><p data-node-view-content=\"\" class=\"node-paragraph-view__content--hRxcjf1f\" style=\"white-space: pre-wrap;\"><br class=\"ProseMirror-trailingBreak\"></p></div></div>",
+  "toolbar_tooltips": [
+    {
+      "i": 0,
+      "tooltip": null
+    },
+    {
+      "i": 1,
+      "tooltip": null
+    },
+    {
+      "i": 2,
+      "tooltip": null
+    },
+    {
+      "i": 3,
+      "tooltip": null
+    },
+    {
+      "i": 4,
+      "tooltip": null
+    },
+    {
+      "i": 5,
+      "tooltip": null
+    },
+    {
+      "i": 6,
+      "tooltip": null
+    },
+    {
+      "i": 7,
+      "tooltip": null
+    },
+    {
+      "i": 8,
+      "tooltip": null
+    },
+    {
+      "i": 9,
+      "tooltip": null
+    },
+    {
+      "i": 10,
+      "tooltip": null
+    },
+    {
+      "i": 11,
+      "tooltip": null
+    }
+  ]
+}

@@ -8,6 +8,7 @@ in a `meta.json` beside the context. Liveness is never cached: `is_alive`
 probes the live site every time.
 """
 import json
+import time
 from pathlib import Path
 
 from src import vc_adapter, pikabu_adapter
@@ -74,3 +75,38 @@ PLATFORMS = {
 
 def known_platforms() -> list[str]:
     return sorted(PLATFORMS)
+
+
+def open_context(p, client: str, platform: str, headless: bool, root: Path = PROFILES_ROOT):
+    """Launch a persistent Chromium context on this profile and return (ctx, page)."""
+    pdir = profile_dir(client, platform, root)
+    pdir.mkdir(parents=True, exist_ok=True)
+    ctx = p.chromium.launch_persistent_context(
+        str(pdir), headless=headless, args=["--start-maximized"], no_viewport=True
+    )
+    page = ctx.pages[0] if ctx.pages else ctx.new_page()
+    return ctx, page
+
+
+def is_alive(client: str, platform: str, headless: bool = True,
+             timeout_ms: int = 8000, root: Path = PROFILES_ROOT) -> bool:
+    """Probe the live site: open the editor and look for the logged-in marker.
+
+    No cache — cookies can expire server-side at any time, so we always check.
+    A missing profile folder counts as dead (needs login).
+    """
+    from playwright.sync_api import sync_playwright
+
+    if not profile_dir(client, platform, root).exists():
+        return False
+    entry = PLATFORMS[platform]
+    with sync_playwright() as p:
+        ctx, page = open_context(p, client, platform, headless=headless, root=root)
+        try:
+            page.goto(entry["editor_url"], wait_until="domcontentloaded")
+            page.wait_for_selector(entry["alive_marker"], timeout=timeout_ms)
+            return True
+        except Exception:
+            return False
+        finally:
+            ctx.close()

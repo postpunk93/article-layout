@@ -59,50 +59,25 @@ def _type_runs(page, runs):
             page.keyboard.press("Control+b")
 
 
-def _paste_via_clipboard(page, html, expected_blocks):
-    """Put body HTML on the real clipboard and paste it with a genuine Ctrl+V.
+def _set_clipboard(page, html):
+    """Put clean body HTML on the real clipboard via the async Clipboard API.
 
-    Editor.js treats a real paste (unlike a synthetic ClipboardEvent) like a manual
-    paste, so paragraphs/headings/lists survive. strong/em and quotes do not — they
-    are restored in later passes.
+    Requires clipboard-write permission (granted in build_document). Writing our
+    CLEAN html (not an execCommand copy of a styled offscreen div, which the browser
+    bloats with inline styles) is what Editor.js parses into one block per element.
+    The actual paste is a real Ctrl+V issued by the caller AFTER focusing the body —
+    no JS may run between focusing the body and the paste, or the body caret is lost.
     """
     page.evaluate(
-        """(html) => {
-            const div = document.createElement('div');
-            div.contentEditable = 'true';
-            div.style.cssText = 'position:fixed;left:-9999px;top:0;opacity:0';
-            div.innerHTML = html;
-            document.body.appendChild(div);
-            const r = document.createRange();
-            r.selectNodeContents(div);
-            const s = window.getSelection();
-            s.removeAllRanges();
-            s.addRange(r);
-            document.execCommand('copy');
-            s.removeAllRanges();
-            div.remove();
+        """async (html) => {
+            const plain = html.replace(/<[^>]+>/g, '');
+            await navigator.clipboard.write([new ClipboardItem({
+                'text/html': new Blob([html], {type: 'text/html'}),
+                'text/plain': new Blob([plain], {type: 'text/plain'}),
+            })]);
         }""",
         html,
     )
-    # Paste INTO the body's editable, not just the block wrapper. Clicking the
-    # .ce-block wrapper does not reliably move focus off the title field, so a global
-    # Ctrl+V lands in the title; press on the editable locator, which focuses it first.
-    # Editor.js seeds one empty paragraph block on open; wait for it so we don't race
-    # the initial render.
-    page.wait_for_selector(".codex-editor .ce-block", timeout=10000)
-    editables = page.locator(".codex-editor .ce-block [contenteditable]")
-    target = editables.first if editables.count() else page.locator(".codex-editor .ce-block").first
-    target.click()
-    target.press("Control+V")
-    # Wait for the pasted blocks to materialise (best-effort; mapping is validated later).
-    try:
-        page.wait_for_function(
-            "(n) => document.querySelectorAll('.codex-editor .ce-block').length >= n",
-            arg=expected_blocks,
-            timeout=15000,
-        )
-    except Exception:
-        pass
 
 
 def _select_range(page, container_selector, start, end):
@@ -141,11 +116,17 @@ def _select_range(page, container_selector, start, end):
     )
 
 
-def _block_ids(page):
-    """Editor.js tags each block wrapper with data-id; return them in document order
-    so the i-th IR block can be addressed by a unique, stable selector."""
+def _body_block_ids(page):
+    """data-id of each BODY block in document order, EXCLUDING the title block.
+
+    On vc.ru the title is itself a .ce-block inside .codex-editor (its editable has
+    data-placeholder="Заголовок"). The pasted body blocks are all the other .ce-blocks,
+    so we filter the title out to map the i-th IR block to the i-th body block.
+    """
     return page.evaluate(
-        "() => [...document.querySelectorAll('.codex-editor .ce-block')].map(b => b.dataset.id)"
+        """() => [...document.querySelectorAll('.codex-editor .ce-block')]
+            .filter(b => !b.querySelector('[data-placeholder="Заголовок"]'))
+            .map(b => b.dataset.id)"""
     )
 
 
@@ -158,14 +139,14 @@ def _open_toolbox_on_active(page):
     """Open the '+' toolbox for the CURRENTLY active block.
 
     The caller must have placed the caret in the target (empty) block with a REAL
-    click first — Editor.js anchors the toolbar on real caret events. Unlike a
-    last-block-anchored open, this works for inserts in the MIDDLE of the document.
+    click first — Editor.js anchors the toolbar on real caret events, and the real
+    click also scrolls the block into view. Two VC specifics: the '+' button is never
+    "visible" to Playwright (0-size until hover), so JS-click it; and the toolbox
+    popover can render outside the viewport for a scrolled block, so wait for its
+    'opened' class as ATTACHED (visible-waiting would time out).
     """
-    try:
-        page.click(".ce-toolbar__plus", timeout=5000)
-    except Exception:
-        page.eval_on_selector(".ce-toolbar__plus", "el => el.click()")
-    page.wait_for_selector(TOOLBOX_OPEN_SEL, timeout=5000)
+    page.eval_on_selector(".ce-toolbar__plus", "el => el.click()")
+    page.wait_for_selector(TOOLBOX_OPEN_SEL, state="attached", timeout=5000)
 
 
 def _format_list_items(page, block_id, list_block):
@@ -200,10 +181,10 @@ def _replace_paragraph_with_quote(page, block_id, quote):
 
 
 def _replace_marker_with_image(page, block, path, log):
-    """Find the [[IMG:file]] marker paragraph, empty it, and upload a native image in
+    """Find the [[IMG file]] marker paragraph, empty it, and upload a native image in
     its place (VC strips <img>/data-URI on paste). The caption goes into the image
-    block's native caption field."""
-    needle = f"[[IMG:{block.file}]]"
+    block's native caption field. Marker uses a space (not a colon) — see emit_body."""
+    needle = f"[[IMG {block.file}]]"
     idx = page.evaluate(
         """(needle) => {
             const blocks = [...document.querySelectorAll('.codex-editor .ce-block')];
@@ -246,6 +227,7 @@ def _replace_marker_with_image(page, block, path, log):
 
 def build_document(page, doc, images_dir: Path, log=print):
     log(f"Opening editor: {EDITOR_URL}")
+    page.context.grant_permissions(["clipboard-read", "clipboard-write"])
     page.goto(EDITOR_URL)
     page.wait_for_selector(TITLE_SEL, timeout=30000)
     time.sleep(2)
@@ -253,16 +235,32 @@ def build_document(page, doc, images_dir: Path, log=print):
     log(f"Title: {doc.title!r}")
     page.click(TITLE_SEL)
     page.keyboard.type(doc.title)
-    time.sleep(0.3)
 
-    # 1. Paste the whole structure (quotes as <p>, images as [[IMG:file]] markers).
-    body_html = emit_body(doc, caption_marker=False, quote_as_paragraph=True)
+    # 1. Paste the whole structure (quotes as <p>, images as [[IMG file]] markers).
+    # Put the body on the clipboard FIRST, then move the caret into the body and Ctrl+V
+    # with NO JS in between (JS would drop the body caret). Enter from the title creates
+    # and focuses the first body block; a real Ctrl+V there is processed like a manual
+    # paste, so headings/paragraphs/lists survive. The title is its own .ce-block.
+    body_html = emit_body(doc, caption_marker=False, quote_as_paragraph=True, img_sep=" ")
     log("Pasting body via real clipboard…")
-    _paste_via_clipboard(page, body_html, expected_blocks=len(doc.blocks))
+    _set_clipboard(page, body_html)
+    page.click(TITLE_SEL)
+    page.keyboard.press("End")
+    page.keyboard.press("Enter")
+    page.keyboard.press("Control+V")
+    try:
+        page.wait_for_function(
+            """(n) => [...document.querySelectorAll('.codex-editor .ce-block')]
+                .filter(b => !b.querySelector('[data-placeholder="Заголовок"]')).length >= n""",
+            arg=len(doc.blocks),
+            timeout=15000,
+        )
+    except Exception:
+        pass
     time.sleep(0.8)
 
-    # 2. Validate the 1:1 block mapping.
-    ids = _block_ids(page)
+    # 2. Validate the 1:1 block mapping (body blocks only — the title is excluded).
+    ids = _body_block_ids(page)
     positional_ok = len(ids) == len(doc.blocks)
     if not positional_ok:
         log(f"WARNING: block mapping off (expected {len(doc.blocks)}, got {len(ids)}); "
@@ -283,21 +281,29 @@ def build_document(page, doc, images_dir: Path, log=print):
                 _format_list_items(page, ids[i], block)
 
     # 3b. Quotes: empty the paragraph at its position, insert a native quote block.
+    # Best-effort per quote: a failure here must not abort the run (images still go in).
     if positional_ok:
         for i, block in enumerate(doc.blocks):
             if isinstance(block, Quote):
                 log(f"[{i}] quote -> native quote block")
-                _replace_paragraph_with_quote(page, ids[i], block)
+                try:
+                    _replace_paragraph_with_quote(page, ids[i], block)
+                except Exception as e:  # noqa: BLE001
+                    log(f"  quote at block {i} failed ({str(e)[:80]}) — left as a paragraph")
 
     # 4. Images last (matched by marker content; conversion keeps block count).
+    # Best-effort per image: a failure must not abort the rest.
     images = [b for b in doc.blocks if isinstance(b, Image)]
     log(f"Uploading {len(images)} image(s)…")
     for block in images:
         path = images_dir / block.file
         if not path.exists():
-            log(f"  IMAGE MISSING ON DISK: {path} — leaving marker [[IMG:{block.file}]]")
+            log(f"  IMAGE MISSING ON DISK: {path} — leaving marker [[IMG {block.file}]]")
             continue
-        _replace_marker_with_image(page, block, path, log)
+        try:
+            _replace_marker_with_image(page, block, path, log)
+        except Exception as e:  # noqa: BLE001
+            log(f"  image {block.file} failed ({str(e)[:80]}) — marker left in body")
 
     # 5. Confirm the draft saved (URL gains an id=NNN).
     try:

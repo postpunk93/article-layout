@@ -233,19 +233,21 @@ def build_document(page, doc, images_dir: Path, log=print):
     time.sleep(2)
 
     log(f"Title: {doc.title!r}")
-    page.click(TITLE_SEL)
-    page.keyboard.type(doc.title)
-
     # 1. Paste the whole structure (quotes as <p>, images as [[IMG file]] markers).
-    # Put the body on the clipboard FIRST, then move the caret into the body and Ctrl+V
-    # with NO JS in between (JS would drop the body caret). Enter from the title creates
-    # and focuses the first body block; a real Ctrl+V there is processed like a manual
-    # paste, so headings/paragraphs/lists survive. The title is its own .ce-block.
+    # Order is load-bearing: put the body on the clipboard FIRST, then type the title and
+    # press Enter to drop into the body, then Ctrl+V — with NO JS between the title and
+    # the paste (JS that touches the selection drops the body caret). The title is its own
+    # .ce-block; Enter from it creates and focuses the first body block, and a real Ctrl+V
+    # there is processed like a manual paste, so headings/paragraphs/lists survive.
+    # We do NOT press End before Enter: a long title wraps to multiple lines and End goes
+    # to the end of the current visual LINE, so Enter would split the title mid-way (half
+    # in the title field, half as the first body paragraph). Typing leaves the caret at the
+    # true end of the title already, so Enter there is a clean break.
     body_html = emit_body(doc, caption_marker=False, quote_as_paragraph=True, img_sep=" ")
     log("Pasting body via real clipboard…")
     _set_clipboard(page, body_html)
     page.click(TITLE_SEL)
-    page.keyboard.press("End")
+    page.keyboard.type(doc.title)
     page.keyboard.press("Enter")
     page.keyboard.press("Control+V")
     try:

@@ -12,6 +12,10 @@ def test_parse_platforms_all_expands_to_known():
     assert orchestrator.parse_platforms("all", ["pikabu", "vc"]) == ["pikabu", "vc"]
 
 
+def test_parse_platforms_dedupes_preserving_order():
+    assert orchestrator.parse_platforms("vc,pikabu,vc", ["pikabu", "vc"]) == ["vc", "pikabu"]
+
+
 def test_parse_platforms_rejects_unknown():
     with pytest.raises(ValueError) as e:
         orchestrator.parse_platforms("vc,telegram", ["pikabu", "vc"])

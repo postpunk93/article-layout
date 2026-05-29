@@ -38,22 +38,67 @@ contenteditable. Heading levels are encoded in a class (`editor-header-tool--h2`
 - **Title**: `div.editor-tool-input[data-placeholder="Заголовок"]` (contenteditable).
 - **Body root**: `.codex-editor`; blocks are `.ce-block`; a paragraph's editable is
   `.editor-text-tool`.
-- **Add-block "+"**: `.ce-toolbar__plus` — only clickable when the current block is
-  EMPTY (create one with Enter first). After a custom block it may report "not
-  visible"; fall back to a JS click: `eval_on_selector('.ce-toolbar__plus','el=>el.click()')`.
+- **Title is itself a `.ce-block`** inside `.codex-editor` (its editable carries
+  `data-placeholder="Заголовок"`). Exclude it when counting/addressing body blocks:
+  filter `.ce-block` to those WITHOUT a `[data-placeholder="Заголовок"]` editable.
+- **Add-block "+"**: `.ce-toolbar__plus`. It is effectively 0-size, so Playwright
+  treats it as NOT visible — `page.click` times out. ALWAYS JS-click it:
+  `eval_on_selector('.ce-toolbar__plus','el=>el.click()')`. The caller must first put
+  the caret in the target EMPTY block with a REAL click (anchors the toolbar + scrolls
+  it into view).
 - **Toolbox popover**: `.ce-popover.ce-toolbox.opened`; items are
   `li.ce-toolbox__item[data-type="…"]`. Order: `text`, `header` (H2), `header` (H3),
   `media` (image), `andropov` (link embed), `quote`, `list`, `code`, `delimiter`,
   `audio`, `quiz`, `person`. **First `[data-type="header"]` = H2, second = H3.**
+  Wait for the opened popover with `state="attached"` (NOT visible): for a scrolled
+  block it can render outside the viewport and a visible-wait times out.
 - **Inline formatting** (on selection): `button.cdx-inline-toolbar__button[data-type=
   "bold"|"italic"|"link"]`; Ctrl+B / Ctrl+I toggles also work while typing.
 - **Publish (DO NOT click)**: `button.button--type-primary` («Опубликовать»).
 
-### Body approach — per-block typing (paste is lossy)
-Clipboard paste into VC strips `<strong>/<em>` and drops marker/following paragraphs,
-so the adapter builds the body **block by block** from the IR (not via `emit_html`
-markers): title → typed; paragraph → typed with Ctrl+B/I per run; heading → empty
-block → "+" → header item by level → type; image → upload flow below.
+### Body approach — real-clipboard paste + restore passes
+A **real** `Ctrl+V` from the OS clipboard is processed by Editor.js like a manual
+paste (unlike a synthetic `ClipboardEvent`, which dropped paragraphs), so paragraphs,
+H2/H3 headings and bullet/ordered lists survive a single paste. Validated end-to-end
+on `in/lists-quotes` (72 body blocks, 1 quote, 10 images, 15 bold/italic runs).
+
+Sequence that actually works (order is load-bearing):
+1. Put the body HTML on the real clipboard via `navigator.clipboard.write` with a
+   `text/html` Blob — our CLEAN html. (`grant_permissions(["clipboard-write"])` first.
+   Do NOT use `execCommand('copy')` of a styled offscreen div: the browser bloats that
+   to ~6× with inline styles and the editor under-segments it.)
+2. Click the title and TYPE it. Typing leaves the caret at the title's true end.
+3. `Enter` → moves the caret INTO the body and creates the first body block. The title
+   is its own `.ce-block`, so a `Ctrl+V` while the caret is in the title pastes the
+   whole article into the TITLE — you must move into the body first.
+   > Do NOT press `End` before `Enter`. A long title wraps to multiple lines and `End`
+   > goes to the end of the current visual LINE, so `Enter` splits the title mid-way
+   > (first line stays in the title, the rest becomes the first body paragraph). Set
+   > the clipboard BEFORE typing so no JS runs between the title and the paste.
+4. `Ctrl+V` with NO JS in between (any JS that touches the selection drops the body
+   caret and the paste no-ops).
+
+HTML comes from `emit_body(doc, caption_marker=False, quote_as_paragraph=True,
+img_sep=" ")`: quotes as `<p>`, images as `[[IMG file]]` markers.
+> **Marker colon is fatal.** `[[IMG:file.png]]` ABORTS the multi-block paste — the
+> editor reads `IMG:file.png` as a `scheme:path` link. A space (`[[IMG file]]`) pastes
+> intact. (Brackets alone and `file.png` alone are both fine; it's the `word:word.ext`
+> shape that triggers it.) Real article URLs could in principle trigger the same, but
+> the mapping check below catches a short paste.
+
+Then restore what paste drops:
+- **strong/em** — reapplied by selecting each run's char-offset range and pressing
+  Ctrl+B/Ctrl+I (body blocks addressed by Editor.js `data-id`).
+- **quotes** — the editor CANNOT convert a paragraph to a quote, so the paragraph is
+  emptied (Ctrl+A, Delete) and a native quote block is inserted in its place.
+- **images** — VC strips `<img>`/data-URI on paste, so each `[[IMG file]]` marker is
+  replaced by a native upload (file chooser) with the caption typed into the image
+  block's own caption field.
+
+Mapping check: after paste, the adapter compares the BODY `.ce-block` count (title
+excluded) to the IR block count; on mismatch it logs a warning and skips the strong/em
++ quote passes (images still run, matched by marker content). Each quote/image is
+best-effort so one failure can't abort the run.
 
 ### Image insertion (confirmed)
 1. Ensure an empty active block (press Enter).

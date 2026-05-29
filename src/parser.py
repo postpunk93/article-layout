@@ -24,6 +24,25 @@ def style_class_sets(html: str):
     return italic, bold
 
 
+def yellow_class_set(html: str):
+    """Return the set of CSS classes whose rule sets background-color:#ffff00."""
+    soup = BeautifulSoup(html, "html.parser")
+    css = "\n".join(s.get_text() for s in soup.find_all("style"))
+    yellow = set()
+    for name, body in re.findall(r"\.(c\d+)\s*\{([^}]*)\}", css):
+        if "background-color:#ffff00" in re.sub(r"\s+", "", body):
+            yellow.add(name)
+    return yellow
+
+
+def _is_yellow_quote(p, yellow_classes):
+    """True if every non-empty direct <span> of p carries a yellow class."""
+    spans = [s for s in p.find_all("span", recursive=False) if s.get_text().strip()]
+    if not spans:
+        return False
+    return all(any(c in yellow_classes for c in s.get("class", [])) for s in spans)
+
+
 def _span_style(span, italic_classes, bold_classes):
     classes = span.get("class", []) if hasattr(span, "get") else []
     italic = any(c in italic_classes for c in classes)
@@ -86,6 +105,7 @@ def _parse_list(el, italic_classes, bold_classes):
 
 def parse(html: str) -> Document:
     italic_classes, bold_classes = style_class_sets(html)
+    yellow_classes = yellow_class_set(html)
     soup = BeautifulSoup(html, "html.parser")
     body = soup.find("body")
     title = ""
@@ -117,5 +137,8 @@ def parse(html: str) -> Document:
         if el.name == "h2":
             blocks.append(Heading(level=2, runs=runs))
         else:
+            if el.name == "p" and _is_yellow_quote(el, yellow_classes):
+                blocks.append(Quote(runs=runs))
+                continue
             blocks.append(Paragraph(runs=runs))
     return Document(title=title, blocks=blocks)

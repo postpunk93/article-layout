@@ -1,17 +1,25 @@
 # Experiment 04 — Pikabu editor discovery
 
 **Date:** 2026-05-29
-**Status:** IN PROGRESS — most facts recorded; ONE open question (image upload).
+**Status:** ✅ COMPLETE — all questions solved; adapter built & validated end-to-end.
 **Editor:** Pikabu's post editor is **Tiptap / ProseMirror** (Vue-wrapped).
 
 ## TL;DR for resuming
-- Title, body, formatting, headings, lists, quotes — all SOLVED.
-- **HTML paste into Tiptap is high-fidelity** → the whole body can go in ONE paste
-  (h2, p, b/i, ul, ol, li, blockquote all survive). This is the big win and lets
-  the Pikabu adapter be much simpler than VC's block-by-block approach.
-- **OPEN:** how to drive the image upload programmatically (floating "+" → photo
-  button does not open a file chooser on an ElementHandle `.click()`). See
-  "Image upload" below for what was tried and what to try next.
+- Title, body, formatting, headings, lists, quotes — all SOLVED (high-fidelity paste).
+- **Image upload SOLVED** — paste a real `File` (image bytes) onto the editor via a
+  synthetic `paste` event; Tiptap intercepts it and uploads to `cs*.pikabu.ru`. The
+  floating "+" → photo button is a dead end (a trusted bbox `page.mouse.click`
+  fires NO file chooser, NO input[type=file], NO submenu, NO XHR — probe_image5).
+  Paste-a-File works instead (probe_image6).
+- **Image caption is NATIVE** — each image node has a `node-image-caption-view`
+  (placeholder «Введите описание к изображению (не обязательно)»). Set it from the IR;
+  no separate caption paragraph needed.
+- **Draft save SOLVED** — click «Сохранить черновик»; fires `POST …/save_draft_post`
+  → 200. `/add` never restores it (always a fresh post); the saved draft lives at
+  **https://pikabu.ru/drafts** (confirmed persisted — probe_draft3).
+- **Adapter built:** `src/pikabu_adapter.py` + `run_pikabu.py`. Validated on the full
+  real article: 72 IR blocks → 72 editor blocks, 10 images uploaded, 2 captions
+  matching IR, lists/quote/headings intact, no leftover markers, draft saved.
 
 ## New-post navigation
 - URL of the "new post" page: **https://pikabu.ru/add**
@@ -68,53 +76,82 @@
 - `emit_html.emit_body` already emits exactly this kind of clean HTML with
   `[[IMG:file]]` / `[[CAP:text]]` markers → reuse it for the paste.
 
-## Image upload  ← ONLY OPEN QUESTION
-- Path is: focus an empty line → click floating "+" (`.floating-menu-view__button--HzqgG6Ir`)
-  → click the photo button (`.floating-menu-view__menuButton--MJpEPZAY` whose icon use
-  href contains `photo`).
-- TRIED and FAILED to capture an upload:
-  - JS `el.click()` on the photo button: no file chooser (untrusted gesture — browsers
-    block file dialogs from untrusted clicks).
-  - Real Playwright `ElementHandle.click()` inside `page.expect_file_chooser(8000)`:
-    timed out, NO file chooser fired (`probe_image3.json`, `photo_button_found=true`).
-  - After the photo click: NO new `input[type=file]`, NO modal/dialog/dropzone, editor
-    tail unchanged (`probe_image4.json`). So the click may not be reaching the handler,
-    OR a secondary submenu/upload widget appears that we didn't capture.
-- TO TRY NEXT SESSION (in order):
-  1. Real mouse click by bounding box: `page.mouse.click(cx, cy)` on the photo button,
-     wrapped in `expect_file_chooser(timeout=15000)`. Confirms whether a trusted click
-     opens the native chooser.
-  2. After clicking photo, dump ALL visible buttons WITH TEXT (a secondary popover may
-     offer «Загрузить с устройства» / «По ссылке» / «Из моих»). The real upload trigger
-     may be one level deeper.
-  3. Try drag-and-drop / paste-image: dispatch a `paste` (or `drop`) event with a
-     `DataTransfer` containing a `File` (image bytes) onto `.tiptap.ProseMirror`.
-     Tiptap image extensions often accept pasted/dropped image Files and upload them.
-  4. Watch network: capture the upload XHR endpoint when a manual drag-drop is done, to
-     understand the contract.
-- After upload works: find where the caption goes (figcaption / a contenteditable under
-  the `<img>` node-wrapper) and how to set it.
+## Image upload  ← SOLVED (paste a File; the "+→photo" button is a dead end)
+- **WINNING METHOD (probe_image6):** build a real `File` from the image bytes in the
+  page and dispatch a synthetic `paste` carrying it onto `.tiptap.ProseMirror`:
+  ```js
+  const res  = await fetch('data:' + mime + ';base64,' + b64);
+  const file = new File([await res.blob()], name, {type: mime});
+  const dt = new DataTransfer(); dt.items.add(file);
+  el.dispatchEvent(new ClipboardEvent('paste', {clipboardData: dt, bubbles:true, cancelable:true}));
+  ```
+  Tiptap's image extension intercepts the File, shows a `blob:` placeholder
+  (`node-image-loader-view__image`), uploads it (GET `…/get-upload-file-token` then a
+  POST), and swaps in the final `https://cs*.pikabu.ru/…jpg` src on
+  `node-image-view__image` (with width/height). WAIT for that http(s) src before
+  proceeding (upload is async).
+- The floating "+" → photo button (`#icon--ui__photo_20`) is a DEAD END: a real
+  trusted `page.mouse.click` on its bbox fires NO file chooser, NO `input[type=file]`
+  (any frame), NO submenu, NO XHR (probe_image5). Don't pursue it.
+- **Marker replacement:** body is pasted with `[[IMG:file]]` marker paragraphs; for
+  each, select the marker `<p>`'s contents via a DOM Range, then paste the image File
+  → ProseMirror replaces the selection in place. This leaves an EMPTY paragraph where
+  the marker was (image is a block node) — delete it: caret to start of that empty
+  para, press Backspace (merges into previous block). Match markers BY FILENAME, not
+  position, and process top-to-bottom so the just-added image is always the last `img`.
 
-## Required fields + stop point  (tentative — confirm next session)
-- Draft exists → plan to **stop at a saved draft** via «Сохранить черновик», leaving
-  tags / community / flags to the user (mirrors VC: build, don't publish).
-- Tags appear required to PUBLISH (not necessarily to save a draft). Community has a
-  default («Сообщество (по умолчанию)»). Confirm whether a draft saves with empty tags.
+## Image caption  ← SOLVED (native field)
+- Structure: `node-image-view__host` › `figure.node-image-view__figure[contenteditable=false]`
+  (the `<img>` + edit/delete controls) + sibling `div.node-image-caption-view__host`
+  containing `div.node-image-caption-view__placeholder[contenteditable=false]` (the
+  «Введите описание…» hint) and `div[data-node-view-content]` (the editable caption).
+- **Setting it:** a programmatic DOM Range does NOT reliably sync to ProseMirror's
+  selection (typed text lands elsewhere), and the empty caption is ~0-height so a
+  locator click stalls. Instead compute the caption host's on-screen point and fire a
+  REAL `page.mouse.click(x, y)`, then `keyboard.type`. CRITICAL: `scrollIntoView({block:'center'})`
+  the caption first — in a long article it's off-screen and the viewport-relative click
+  would miss (this exact bug left all captions empty on the first full-article run).
 
-## Adapter design implication (revised, simpler than the plan's block-by-block)
-1. Set title: `textarea[placeholder="Заголовок"]`.
-2. Build body HTML via `emit_html.emit_body(doc)` (with `[[IMG:]]`/`[[CAP:]]` markers),
-   paste it into `.tiptap.ProseMirror` in ONE shot (synthetic paste event above).
-3. For each `[[IMG:file]]` marker in order: place caret on it → run the image-upload
-   path (once solved) → set caption → remove the marker.
-4. Save draft, stop. (Never auto-publish.)
+## Draft saving  ← SOLVED
+- Button «Сохранить черновик» (also present: «Опубликовать пост» = `[data-test="story-publish"]`,
+  and a char-counter button «N/10…»). Clicking it fires `POST …/save_draft_post` → 200;
+  wait on that response as the success signal (URL never changes).
+- `/add` ALWAYS opens a fresh post (does not restore). The saved draft persists at
+  **https://pikabu.ru/drafts** (verified: the draft's marker text is present there).
+  Adapter stops here (never publishes), browser left open for review.
+
+## Required fields + stop point
+- Stop at a **saved draft** via «Сохранить черновик» (confirmed it persists with EMPTY
+  tags/community — no fields required to SAVE). Tags/community are left to the user;
+  they appear required only to PUBLISH. Community default: «Сообщество (по умолчанию)».
+
+## Adapter design (as built — `src/pikabu_adapter.py`)
+1. Set title: `page.click('textarea[placeholder="Заголовок"]')` then `keyboard.type`.
+2. Body in ONE high-fidelity paste: `emit_body(doc, caption_marker=False)` → synthetic
+   `paste` of `text/html` onto `.tiptap.ProseMirror`. No CAP markers (caption is native).
+3. For each `Image` block, in order, matched by filename:
+   - select its `[[IMG:file]]` marker `<p>` contents (DOM Range);
+   - paste the image File (uploads), wait for the http(s) src;
+   - if it has a caption, scroll the caption host into view + real `mouse.click` + type;
+   - delete the leftover empty marker paragraph (Backspace).
+4. Click «Сохранить черновик», wait for `save_draft_post`, stop. (Never publishes.)
+- Run it: `python run_pikabu.py in/<slug>` (mirrors `run_vc.py`).
 
 ## Probe scripts (in this folder, all non-interactive, reusable)
 - `probe_add.py` — fields/buttons/file-inputs dump → console (mojibake; use JSON probes).
 - `probe_interact.py` → `probe_report.json` — toolbar `data-test` map + Ctrl+B/I test.
 - `probe_paste.py` → `probe_paste.json` — HTML paste fidelity (the key result).
 - `probe_image.py` / `probe_image2.py` → floating-menu media buttons by icon.
-- `probe_image3.py` / `probe_image4.py` — image-upload attempts (currently failing; see above).
-- All reuse the authenticated `.pikabu-profile/`. Run e.g. `python experiments/04-pikabu-editor/probe_paste.py`.
+- `probe_image3.py` / `probe_image4.py` — FAILED "+→photo" button attempts (dead end).
+- `probe_image5.py` → `probe_image5.json` — trusted bbox click on photo button: still
+  no chooser/input/submenu/XHR (confirms the button is a dead end).
+- `probe_image6.py` → `probe_image6.json` — **paste-a-File uploads** (the solution).
+- `probe_image7.py` → `probe_image7.json` — marker replacement + caption-field discovery.
+- `probe_draft.py` / `probe_draft2.py` / `probe_draft3.py` — draft save: endpoint, no
+  /add restore, persists at `/drafts`.
+- `verify_adapter.py` → `verify_adapter.json` — full adapter end-to-end check; dumps the
+  editor block structure. No arg = small synthetic doc; `in/<slug>` arg = real article.
+- All reuse the authenticated `.pikabu-profile/`. Run e.g. `python experiments/04-pikabu-editor/probe_paste.py`
+  (the src-importing ones need `PYTHONPATH=.`, e.g. `PYTHONPATH=. python …/verify_adapter.py in/lists-quotes`).
 - `discover_pikabu.py` (in `src/`) opens the editor and keeps the window open until you
   close it — used for the one-time manual login that seeds `.pikabu-profile/`.

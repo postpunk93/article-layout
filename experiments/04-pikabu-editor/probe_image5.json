@@ -1,0 +1,227 @@
+{
+  "image_file": "C:\\Projects\\article-layout\\example\\lists-quotes\\images\\image1.png",
+  "requests": [
+    {
+      "method": "POST",
+      "url": "https://cs45.pikabu.ru/v2/event/j/3/startSession",
+      "ct": "text/plain;charset=UTF-8",
+      "multipart": false
+    },
+    {
+      "method": "POST",
+      "url": "https://cs45.pikabu.ru/v2/event/j/3/pageLoad",
+      "ct": "text/plain;charset=UTF-8",
+      "multipart": false
+    },
+    {
+      "method": "POST",
+      "url": "https://ad.mail.ru/hbid_yandex/",
+      "ct": "text/plain",
+      "multipart": false
+    },
+    {
+      "method": "POST",
+      "url": "https://ssp-rtb.sape.ru/adfoxhb",
+      "ct": "text/plain",
+      "multipart": false
+    },
+    {
+      "method": "POST",
+      "url": "https://exchange.buzzoola.com/ssp/adfox",
+      "ct": "text/plain",
+      "multipart": false
+    },
+    {
+      "method": "POST",
+      "url": "https://ssp.hybrid.ai/adfoxhb",
+      "ct": "text/plain",
+      "multipart": false
+    },
+    {
+      "method": "POST",
+      "url": "https://kimberlite.io/rtb/bid/hb/adfox",
+      "ct": "text/plain",
+      "multipart": false
+    },
+    {
+      "method": "POST",
+      "url": "https://px.adhigh.net/rtb/yandex_hb",
+      "ct": "text/plain",
+      "multipart": false
+    },
+    {
+      "method": "POST",
+      "url": "https://ssp.bidvol.com/rtb/pl999",
+      "ct": "text/plain",
+      "multipart": false
+    },
+    {
+      "method": "POST",
+      "url": "https://ads.betweendigital.com/adjson?t=adfox",
+      "ct": "text/plain",
+      "multipart": false
+    },
+    {
+      "method": "POST",
+      "url": "https://pb.adriver.ru/cgi-bin/bid.cgi",
+      "ct": "text/plain",
+      "multipart": false
+    },
+    {
+      "method": "POST",
+      "url": "https://hb.bumlam.com/yandex/",
+      "ct": "text/plain",
+      "multipart": false
+    },
+    {
+      "method": "POST",
+      "url": "https://adx.videonow.ru/yhb",
+      "ct": "text/plain",
+      "multipart": false
+    },
+    {
+      "method": "POST",
+      "url": "https://ssp.al-adtech.com/api/adfox/bids",
+      "ct": "text/plain",
+      "multipart": false
+    },
+    {
+      "method": "POST",
+      "url": "https://mediatoday.ru/core/rtb/hb/bid",
+      "ct": "text/plain",
+      "multipart": false
+    },
+    {
+      "method": "POST",
+      "url": "https://hb-bidder.skcrtxr.com/bidder",
+      "ct": "text/plain",
+      "multipart": false
+    },
+    {
+      "method": "POST",
+      "url": "https://hb.viadata.store/adfox",
+      "ct": "text/plain",
+      "multipart": false
+    },
+    {
+      "method": "POST",
+      "url": "https://cs45.pikabu.ru/v2/event/j/3/pageLoad",
+      "ct": "text/plain;charset=UTF-8",
+      "multipart": false
+    },
+    {
+      "method": "POST",
+      "url": "https://pikabu.ru/.well-known/ddos-guard/mark/",
+      "ct": "text/plain;charset=UTF-8",
+      "multipart": false
+    },
+    {
+      "method": "POST",
+      "url": "https://mc.yandex.ru/watch/174977/1?page-url=https%3A%2F%2Fpikabu.ru%2Fadd&charset=utf-8&uah=chu%0A%22Chromium%22%3Bv%3D%22125%22%2C%22Not.A%2FBrand%22%3Bv%3D%2",
+      "ct": "",
+      "multipart": false
+    },
+    {
+      "method": "POST",
+      "url": "https://mc.yandex.ru/watch/174977/1?page-url=https%3A%2F%2Fpikabu.ru%2Fadd&charset=utf-8&uah=chu%0A%22Chromium%22%3Bv%3D%22125%22%2C%22Not.A%2FBrand%22%3Bv%3D%2",
+      "ct": "",
+      "multipart": false
+    },
+    {
+      "method": "POST",
+      "url": "https://log.strm.yandex.ru/log?VAS=1305166&event=CreateLoader",
+      "ct": "text/plain;charset=UTF-8",
+      "multipart": false
+    },
+    {
+      "method": "POST",
+      "url": "https://www.google-analytics.com/g/collect?v=2&tid=G-GDRZR2E90Y&gtm=45je65r2v896224258za200zd896224258&_p=1780057809054&gcd=13l3l3l3l1l1&npa=0&dma=0&_eu=AAAAAAQ",
+      "ct": "",
+      "multipart": false
+    },
+    {
+      "method": "POST",
+      "url": "https://cs45.pikabu.ru/v2/event/j/3/userParams",
+      "ct": "text/plain;charset=UTF-8",
+      "multipart": false
+    }
+  ],
+  "filechooser_fired": false,
+  "logged_in": true,
+  "floating_menu_html": "<button type=\"button\" class=\"floating-menu-view__menuButton--MJpEPZAY\"><svg xmlns=\"http://www.w3.org/2000/svg\" class=\"pkb-icon__host--RM9zRTSM\" width=\"20\" height=\"20\"><use xlink:href=\"#icon--ui__photo_20\"></use></svg></button>",
+  "photo_button_found": true,
+  "photo_bbox": {
+    "x": 450.5,
+    "y": 252,
+    "width": 32,
+    "height": 32
+  },
+  "file_inputs_all_frames": [],
+  "submenu_buttons": [
+    {
+      "text": "",
+      "cls": "pkb-control-btn__host--JF26HTaH editor-menu__butto",
+      "dataTest": "editor-ctrl-heading"
+    },
+    {
+      "text": "",
+      "cls": "pkb-control-btn__host--JF26HTaH editor-menu__butto",
+      "dataTest": "editor-ctrl-bold"
+    },
+    {
+      "text": "",
+      "cls": "pkb-control-btn__host--JF26HTaH editor-menu__butto",
+      "dataTest": "editor-ctrl-italic"
+    },
+    {
+      "text": "",
+      "cls": "pkb-control-btn__host--JF26HTaH editor-menu__butto",
+      "dataTest": "editor-ctrl-strike"
+    },
+    {
+      "text": "",
+      "cls": "pkb-control-btn__host--JF26HTaH editor-menu__butto",
+      "dataTest": "editor-ctrl-link"
+    },
+    {
+      "text": "",
+      "cls": "pkb-control-btn__host--JF26HTaH editor-menu__butto",
+      "dataTest": "editor-ctrl-quote"
+    },
+    {
+      "text": "",
+      "cls": "pkb-control-btn__host--JF26HTaH editor-menu__butto",
+      "dataTest": "editor-ctrl-highlight"
+    },
+    {
+      "text": "",
+      "cls": "pkb-control-btn__host--JF26HTaH editor-menu__butto",
+      "dataTest": "editor-ctrl-marker"
+    },
+    {
+      "text": "",
+      "cls": "pkb-control-btn__host--JF26HTaH editor-menu__butto",
+      "dataTest": "editor-ctrl-spoiler"
+    },
+    {
+      "text": "",
+      "cls": "pkb-control-btn__host--JF26HTaH editor-menu__butto",
+      "dataTest": "editor-ctrl-ul"
+    },
+    {
+      "text": "",
+      "cls": "pkb-control-btn__host--JF26HTaH editor-menu__butto",
+      "dataTest": "editor-ctrl-ol"
+    },
+    {
+      "text": "",
+      "cls": "pkb-control-btn__host--JF26HTaH editor-menu__butto",
+      "dataTest": "editor-ctrl-dnd-start"
+    },
+    {
+      "text": "",
+      "cls": "floating-menu-view__button--HzqgG6Ir",
+      "dataTest": null
+    }
+  ]
+}

@@ -8,5 +8,6 @@ __pycache__/
 *.pyc
 .venv/
 .vc-profile/
+.pikabu-profile/
 .pytest_cache/
 experiments/03-vc-editor/capture/

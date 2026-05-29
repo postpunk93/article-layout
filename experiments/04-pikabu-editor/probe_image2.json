@@ -1,0 +1,232 @@
+{
+  "icons_before_plus": [
+    {
+      "icon": "#icon--ui__edit-page_20",
+      "cls": "story-page-drafts__btn--YlEemKeY",
+      "dt": null,
+      "vis": true
+    },
+    {
+      "icon": "#icon--ui__delete_16",
+      "cls": "pkb-btn__host--n2MGeea1 pkb-btn__host_gray--IZZxwJ9K pkb-btn__host_ico",
+      "dt": null,
+      "vis": true
+    },
+    {
+      "icon": "#icon--ui__heading_16",
+      "cls": "pkb-control-btn__host--JF26HTaH editor-menu__button--dVmfe_cZ",
+      "dt": "editor-ctrl-heading",
+      "vis": true
+    },
+    {
+      "icon": "#icon--ui__bold_16",
+      "cls": "pkb-control-btn__host--JF26HTaH editor-menu__button--dVmfe_cZ",
+      "dt": "editor-ctrl-bold",
+      "vis": true
+    },
+    {
+      "icon": "#icon--ui__italic_16",
+      "cls": "pkb-control-btn__host--JF26HTaH editor-menu__button--dVmfe_cZ",
+      "dt": "editor-ctrl-italic",
+      "vis": true
+    },
+    {
+      "icon": "#icon--ui__strikethrough_16",
+      "cls": "pkb-control-btn__host--JF26HTaH editor-menu__button--dVmfe_cZ",
+      "dt": "editor-ctrl-strike",
+      "vis": true
+    },
+    {
+      "icon": "#icon--ui__link_16",
+      "cls": "pkb-control-btn__host--JF26HTaH editor-menu__button--dVmfe_cZ",
+      "dt": "editor-ctrl-link",
+      "vis": true
+    },
+    {
+      "icon": "#icon--ui__quote_16",
+      "cls": "pkb-control-btn__host--JF26HTaH editor-menu__button--dVmfe_cZ",
+      "dt": "editor-ctrl-quote",
+      "vis": true
+    },
+    {
+      "icon": "#icon--ui__text-block_16",
+      "cls": "pkb-control-btn__host--JF26HTaH editor-menu__button--dVmfe_cZ",
+      "dt": "editor-ctrl-highlight",
+      "vis": true
+    },
+    {
+      "icon": "#icon--ui__highlight_16",
+      "cls": "pkb-control-btn__host--JF26HTaH editor-menu__button--dVmfe_cZ",
+      "dt": "editor-ctrl-marker",
+      "vis": true
+    },
+    {
+      "icon": "#icon--ui__eye_hide_16",
+      "cls": "pkb-control-btn__host--JF26HTaH editor-menu__button--dVmfe_cZ",
+      "dt": "editor-ctrl-spoiler",
+      "vis": true
+    },
+    {
+      "icon": "#icon--ui__list_format_16",
+      "cls": "pkb-control-btn__host--JF26HTaH editor-menu__button--dVmfe_cZ editor-m",
+      "dt": "editor-ctrl-ul",
+      "vis": true
+    },
+    {
+      "icon": "#icon--ui__number_list_16",
+      "cls": "pkb-control-btn__host--JF26HTaH editor-menu__button--dVmfe_cZ",
+      "dt": "editor-ctrl-ol",
+      "vis": true
+    },
+    {
+      "icon": "#icon--ui__move_20",
+      "cls": "pkb-control-btn__host--JF26HTaH editor-menu__button--dVmfe_cZ editor-m",
+      "dt": "editor-ctrl-dnd-start",
+      "vis": true
+    },
+    {
+      "icon": "#icon--ui__close",
+      "cls": "community-value-message__close--oiTAO7re",
+      "dt": null,
+      "vis": true
+    },
+    {
+      "icon": "#icon--ui__add_8",
+      "cls": "floating-menu-view__button--HzqgG6Ir",
+      "dt": null,
+      "vis": true
+    }
+  ],
+  "icons_after_plus": [
+    {
+      "icon": "#icon--ui__edit-page_20",
+      "cls": "story-page-drafts__btn--YlEemKeY",
+      "dt": null,
+      "vis": true
+    },
+    {
+      "icon": "#icon--ui__delete_16",
+      "cls": "pkb-btn__host--n2MGeea1 pkb-btn__host_gray--IZZxwJ9K pkb-btn__host_ico",
+      "dt": null,
+      "vis": true
+    },
+    {
+      "icon": "#icon--ui__heading_16",
+      "cls": "pkb-control-btn__host--JF26HTaH editor-menu__button--dVmfe_cZ",
+      "dt": "editor-ctrl-heading",
+      "vis": true
+    },
+    {
+      "icon": "#icon--ui__bold_16",
+      "cls": "pkb-control-btn__host--JF26HTaH editor-menu__button--dVmfe_cZ",
+      "dt": "editor-ctrl-bold",
+      "vis": true
+    },
+    {
+      "icon": "#icon--ui__italic_16",
+      "cls": "pkb-control-btn__host--JF26HTaH editor-menu__button--dVmfe_cZ",
+      "dt": "editor-ctrl-italic",
+      "vis": true
+    },
+    {
+      "icon": "#icon--ui__strikethrough_16",
+      "cls": "pkb-control-btn__host--JF26HTaH editor-menu__button--dVmfe_cZ",
+      "dt": "editor-ctrl-strike",
+      "vis": true
+    },
+    {
+      "icon": "#icon--ui__link_16",
+      "cls": "pkb-control-btn__host--JF26HTaH editor-menu__button--dVmfe_cZ",
+      "dt": "editor-ctrl-link",
+      "vis": true
+    },
+    {
+      "icon": "#icon--ui__quote_16",
+      "cls": "pkb-control-btn__host--JF26HTaH editor-menu__button--dVmfe_cZ",
+      "dt": "editor-ctrl-quote",
+      "vis": true
+    },
+    {
+      "icon": "#icon--ui__text-block_16",
+      "cls": "pkb-control-btn__host--JF26HTaH editor-menu__button--dVmfe_cZ",
+      "dt": "editor-ctrl-highlight",
+      "vis": true
+    },
+    {
+      "icon": "#icon--ui__highlight_16",
+      "cls": "pkb-control-btn__host--JF26HTaH editor-menu__button--dVmfe_cZ",
+      "dt": "editor-ctrl-marker",
+      "vis": true
+    },
+    {
+      "icon": "#icon--ui__eye_hide_16",
+      "cls": "pkb-control-btn__host--JF26HTaH editor-menu__button--dVmfe_cZ",
+      "dt": "editor-ctrl-spoiler",
+      "vis": true
+    },
+    {
+      "icon": "#icon--ui__list_format_16",
+      "cls": "pkb-control-btn__host--JF26HTaH editor-menu__button--dVmfe_cZ editor-m",
+      "dt": "editor-ctrl-ul",
+      "vis": true
+    },
+    {
+      "icon": "#icon--ui__number_list_16",
+      "cls": "pkb-control-btn__host--JF26HTaH editor-menu__button--dVmfe_cZ",
+      "dt": "editor-ctrl-ol",
+      "vis": true
+    },
+    {
+      "icon": "#icon--ui__move_20",
+      "cls": "pkb-control-btn__host--JF26HTaH editor-menu__button--dVmfe_cZ editor-m",
+      "dt": "editor-ctrl-dnd-start",
+      "vis": true
+    },
+    {
+      "icon": "#icon--ui__close",
+      "cls": "community-value-message__close--oiTAO7re",
+      "dt": null,
+      "vis": true
+    },
+    {
+      "icon": "#icon--ui__add_8",
+      "cls": "floating-menu-view__button--HzqgG6Ir",
+      "dt": null,
+      "vis": true
+    },
+    {
+      "icon": "#icon--ui__photo_20",
+      "cls": "floating-menu-view__menuButton--MJpEPZAY",
+      "dt": null,
+      "vis": true
+    },
+    {
+      "icon": "#icon--ui__ic_round-collections",
+      "cls": "floating-menu-view__menuButton--MJpEPZAY",
+      "dt": null,
+      "vis": true
+    },
+    {
+      "icon": "#icon--ui__play_20",
+      "cls": "floating-menu-view__menuButton--MJpEPZAY",
+      "dt": null,
+      "vis": true
+    },
+    {
+      "icon": "#icon--ui__divider_20",
+      "cls": "floating-menu-view__menuButton--MJpEPZAY",
+      "dt": null,
+      "vis": true
+    },
+    {
+      "icon": "#icon--ui__poll_circle_20",
+      "cls": "floating-menu-view__menuButton--MJpEPZAY",
+      "dt": null,
+      "vis": true
+    }
+  ],
+  "floating_container_html": {
+    "sel": "[class*=floating-menu]",
+    "html": "<div class=\"floating-menu-view__host--NJlVWmx4\"><button type=\"button\" class=\"floating-menu-view__button--HzqgG6Ir\"><svg xmlns=\"http://www.w3.org/2000/svg\" class=\"pkb-icon__host--RM9zRTSM\" width=\"8\" height=\"8\"><use xlink:href=\"#icon--ui__add_8\"></use></svg></button><div class=\"floating-menu-view__menu--GilNXSiG floating-menu-view__menu_visible--HXE6cace\"><button type=\"button\" class=\"floating-menu-view__menuButton--MJpEPZAY\"><svg xmlns=\"http://www.w3.org/2000/svg\" class=\"pkb-icon__host--RM9zRTSM\" width=\"20\" height=\"20\"><use xlink:href=\"#icon--ui__photo_20\"></use></svg></button><button type=\"button\" class=\"floating-menu-view__menuButton--MJpEPZAY\"><svg xmlns=\"http://www.w3.org/2000/svg\" class=\"pkb-icon__host--RM9zRTSM\" width=\"20\" height=\"20\"><use xlink:href=\"#icon--ui__ic_round-collections\"></use></svg></button><button type=\"button\" class=\"floating-menu-view__menuButton--MJpEPZAY\"><svg xmlns=\"http://www.w3.org/2000/svg\" class=\"pkb-icon__host--RM9zRTSM\" width=\"20\" height=\"20\"><use xlink:href=\"#icon--ui__play_20\"></use></svg></button><button type=\"button\" class=\"floating-menu-view__menuButton--MJpEPZAY\"><svg xmlns=\"http://www.w3.org/2000/svg\" class=\"pkb-icon__host--RM9zRTSM\" width=\"20\" height=\"20\"><use xlink:href=\"#icon--ui__divider_20\"></use></svg></button><button type=\"button\" class=\"floating-menu-view__menuButton--MJpEPZAY\"><svg xmlns=\"http://www.w3.org/2000/svg\" class=\"pkb-icon__host--RM9zRTSM\" width=\"20\" height=\"20\"><use xlink:href=\"#icon--ui__poll_circle_20\"></use></svg></button><!--v-if--><!--v-if--></div></div>"
+  }
+}

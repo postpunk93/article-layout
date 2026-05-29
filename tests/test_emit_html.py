@@ -1,5 +1,5 @@
 # tests/test_emit_html.py
-from src.ir import Document, Heading, Paragraph, Image, Run
+from src.ir import Document, Heading, Paragraph, Image, ListBlock, ListItem, Quote, Run
 from src.emit_html import emit_body
 
 
@@ -44,7 +44,41 @@ def test_image_without_caption_emits_no_cap_marker():
     assert "[[CAP:" not in html
 
 
+def test_caption_marker_suppressed_when_disabled():
+    # Pikabu has a native caption field, so it pastes the body without CAP markers.
+    doc = Document(
+        title="T",
+        blocks=[Image(file="image8.png", caption=[Run("cap", False, True)])],
+    )
+    html = emit_body(doc, caption_marker=False)
+    assert "[[IMG:image8.png]]" in html
+    assert "[[CAP:" not in html
+
+
 def test_bold_italic_run_nests_both_tags():
     doc = Document(title="T", blocks=[Paragraph(runs=[Run("x", True, True)])])
     html = emit_body(doc)
     assert "<em><strong>x</strong></em>" in html
+
+
+def test_unordered_list_emits_ul_li():
+    doc = Document(title="T", blocks=[ListBlock(ordered=False, items=[
+        ListItem(runs=[Run("first", False, False)]),
+        ListItem(runs=[Run("second", False, False)]),
+    ])])
+    html = emit_body(doc)
+    assert "<ul><li>first</li><li>second</li></ul>" in html
+
+
+def test_ordered_list_emits_ol_li_with_formatting():
+    doc = Document(title="T", blocks=[ListBlock(ordered=True, items=[
+        ListItem(runs=[Run("a ", False, False), Run("bold", True, False)]),
+    ])])
+    html = emit_body(doc)
+    assert "<ol><li>a <strong>bold</strong></li></ol>" in html
+
+
+def test_quote_emits_blockquote_with_escaping():
+    doc = Document(title="T", blocks=[Quote(runs=[Run("q < x", False, False)])])
+    html = emit_body(doc)
+    assert "<blockquote>q &lt; x</blockquote>" in html

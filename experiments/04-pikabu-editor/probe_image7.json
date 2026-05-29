@@ -1,0 +1,117 @@
+{
+  "structure_after_body": [
+    {
+      "tag": "div",
+      "cls": "node-wrapper-view__host--x6bdZ_Cf",
+      "text": "Heading",
+      "hasImg": false
+    },
+    {
+      "tag": "div",
+      "cls": "node-wrapper-view__host--x6bdZ_Cf",
+      "text": "Intro paragraph before the image.",
+      "hasImg": false
+    },
+    {
+      "tag": "div",
+      "cls": "node-wrapper-view__host--x6bdZ_Cf",
+      "text": "[[IMG:image1.png]]",
+      "hasImg": false
+    },
+    {
+      "tag": "div",
+      "cls": "node-wrapper-view__host--x6bdZ_Cf",
+      "text": "[[CAP:This is the caption text]]",
+      "hasImg": false
+    },
+    {
+      "tag": "div",
+      "cls": "node-wrapper-view__host--x6bdZ_Cf",
+      "text": "Paragraph after the image.",
+      "hasImg": false
+    },
+    {
+      "tag": "div",
+      "cls": "node-wrapper-view__host--x6bdZ_Cf",
+      "text": "",
+      "hasImg": false
+    }
+  ],
+  "marker_selected": true,
+  "upload": "ok",
+  "structure_after_image": [
+    {
+      "tag": "div",
+      "cls": "node-wrapper-view__host--x6bdZ_Cf",
+      "text": "Heading",
+      "hasImg": false
+    },
+    {
+      "tag": "div",
+      "cls": "node-wrapper-view__host--x6bdZ_Cf",
+      "text": "Intro paragraph before the image.",
+      "hasImg": false
+    },
+    {
+      "tag": "div",
+      "cls": "node-wrapper-view__host--x6bdZ_Cf",
+      "text": "",
+      "hasImg": false
+    },
+    {
+      "tag": "div",
+      "cls": "node-wrapper-view__host--x6bdZ_Cf",
+      "text": "Введите описание к изображению (не обязательно)",
+      "hasImg": true
+    },
+    {
+      "tag": "div",
+      "cls": "node-wrapper-view__host--x6bdZ_Cf",
+      "text": "[[CAP:This is the caption text]]",
+      "hasImg": false
+    },
+    {
+      "tag": "div",
+      "cls": "node-wrapper-view__host--x6bdZ_Cf",
+      "text": "Paragraph after the image.",
+      "hasImg": false
+    },
+    {
+      "tag": "div",
+      "cls": "node-wrapper-view__host--x6bdZ_Cf",
+      "text": "",
+      "hasImg": false
+    }
+  ],
+  "marker_still_present": false,
+  "image_node": {
+    "wrapperCls": "node-wrapper-view__host--x6bdZ_Cf",
+    "wrapperHtml": "<div class=\"node-wrapper-view__host--x6bdZ_Cf\" data-node-view-wrapper=\"\" data-focus=\"false\" style=\"white-space: normal;\"><!--v-if--><div><div class=\"node-wrapper-view__dragHandleWrapper--SnnuCPei\" contenteditable=\"false\"><div class=\"node-wrapper-view__button--QFFfYqkA\" draggable=\"true\" data-drag-handle=\"\"><svg xmlns=\"http://www.w3.org/2000/svg\" class=\"pkb-icon__host--RM9zRTSM\" width=\"16\" height=\"16\"><use xlink:href=\"#icon--ui__sorting-burger_16\"></use></svg></div></div></div><div class=\"node-wrapper-view__content--YBpn9eXj node-image-view__wrapper--iQ6rnbsz\"><div class=\"node-image-view__host--MB2o4akl\"><figure class=\"node-image-view__figure--UBr1SQds\" contenteditable=\"false\"><img class=\"node-image-view__image--Q0aSYpTB\" src=\"https://cs19.pikabu.ru/s/2026/05/29/15/dj4txibz.jpg\" width=\"700\" height=\"317\" alt=\"\"><div class=\"node-image-view__controls--FfeQ3G75\"><button type=\"button\" class=\"pkb-control-btn__host--JF26HTaH pkb-control-btn__host_media--ynr2aAae\" tabindex=\"0\"><svg xmlns=\"http://www.w3.org/2000/svg\" class=\"pkb-icon__host--RM9zRTSM\" width=\"16\" height=\"16\"><use xlink:href=\"#icon--ui__edit_16\"></use></svg></button><button type=\"button\" class=\"pkb-control-btn__host--JF26HTaH pkb-control-btn__host_media--ynr2aAae\" tabindex=\"0\"><svg xmlns=\"http://www.w3.org/2000/svg\" class=\"pkb-icon__host--RM9zRTSM\" width=\"16\" height=\"16\"><use xlink:href=\"#icon--ui__delete_16\"></use></svg></button></div></figure><div class=\"node-image-caption-view__host--zA_xu75M\"><div class=\"node-image-caption-view__placeholder--npWGSuW2\" contenteditable=\"false\">Введите описание к изображению (не обязательно)</div><div data-node-view-content=\"\" style=\"white-space: pre-wrap;\"><br class=\"ProseMirror-trailingBreak\"></div><!--v-if--></div></div></div></div>",
+    "caption_candidates": [
+      {
+        "tag": "div",
+        "placeholder": null,
+        "editable": "false",
+        "cls": "node-wrapper-view__dragHandleWrapper--SnnuCPei"
+      },
+      {
+        "tag": "figure",
+        "placeholder": null,
+        "editable": "false",
+        "cls": "node-image-view__figure--UBr1SQds"
+      },
+      {
+        "tag": "div",
+        "placeholder": null,
+        "editable": null,
+        "cls": "node-image-caption-view__host--zA_xu75M"
+      },
+      {
+        "tag": "div",
+        "placeholder": null,
+        "editable": "false",
+        "cls": "node-image-caption-view__placeholder--npWGSuW2"
+      }
+    ]
+  }
+}

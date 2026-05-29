@@ -1,0 +1,96 @@
+{
+  "image_file": "C:\\Projects\\article-layout\\example\\lists-quotes\\images\\image1.png",
+  "all_data_test_after_plus": [
+    {
+      "dt": "story-publish",
+      "text": "Опубликовать пост",
+      "vis": true
+    },
+    {
+      "dt": "editor-ctrl-heading",
+      "text": "",
+      "vis": true
+    },
+    {
+      "dt": "editor-ctrl-bold",
+      "text": "",
+      "vis": true
+    },
+    {
+      "dt": "editor-ctrl-italic",
+      "text": "",
+      "vis": true
+    },
+    {
+      "dt": "editor-ctrl-strike",
+      "text": "",
+      "vis": true
+    },
+    {
+      "dt": "editor-ctrl-link",
+      "text": "",
+      "vis": true
+    },
+    {
+      "dt": "editor-ctrl-quote",
+      "text": "",
+      "vis": true
+    },
+    {
+      "dt": "editor-ctrl-highlight",
+      "text": "",
+      "vis": true
+    },
+    {
+      "dt": "editor-ctrl-marker",
+      "text": "",
+      "vis": true
+    },
+    {
+      "dt": "editor-ctrl-spoiler",
+      "text": "",
+      "vis": true
+    },
+    {
+      "dt": "editor-ctrl-ul",
+      "text": "",
+      "vis": true
+    },
+    {
+      "dt": "editor-ctrl-ol",
+      "text": "",
+      "vis": true
+    },
+    {
+      "dt": "editor-ctrl-dnd-start",
+      "text": "",
+      "vis": true
+    },
+    {
+      "dt": "setting-my",
+      "text": "Моё",
+      "vis": true
+    },
+    {
+      "dt": "setting-nsfw",
+      "text": "Пост содержит 18+ контент",
+      "vis": true
+    },
+    {
+      "dt": "setting-anonymous",
+      "text": "Опубликовать анонимно",
+      "vis": true
+    },
+    {
+      "dt": "setting-scheduled",
+      "text": "Отложенная публикация",
+      "vis": true
+    },
+    {
+      "dt": "setting-series",
+      "text": "Опубликовать в серию",
+      "vis": true
+    }
+  ],
+  "menu_html": null
+}

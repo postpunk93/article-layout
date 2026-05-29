@@ -1,0 +1,61 @@
+{
+  "paste_structure": [
+    {
+      "tag": "div",
+      "cls": "node-wrapper-view__host--x6bdZ_Cf",
+      "text": "Section heading",
+      "kids": 2
+    },
+    {
+      "tag": "div",
+      "cls": "node-wrapper-view__host--x6bdZ_Cf",
+      "text": "Plain bold and italic text.",
+      "kids": 2
+    },
+    {
+      "tag": "div",
+      "cls": "node-wrapper-view__host--x6bdZ_Cf",
+      "text": "first\n\nsecond",
+      "kids": 2
+    },
+    {
+      "tag": "div",
+      "cls": "node-wrapper-view__host--x6bdZ_Cf",
+      "text": "one\n\ntwo",
+      "kids": 2
+    },
+    {
+      "tag": "div",
+      "cls": "node-wrapper-view__host--x6bdZ_Cf",
+      "text": "A quoted line.",
+      "kids": 2
+    },
+    {
+      "tag": "div",
+      "cls": "node-wrapper-view__host--x6bdZ_Cf",
+      "text": "After quote.",
+      "kids": 2
+    },
+    {
+      "tag": "div",
+      "cls": "node-wrapper-view__host--x6bdZ_Cf",
+      "text": "",
+      "kids": 2
+    }
+  ],
+  "paste_html": "<div class=\"node-wrapper-view__host--x6bdZ_Cf\" data-node-view-wrapper=\"\" data-focus=\"false\" style=\"white-space: normal;\"><!--v-if--><div><div class=\"node-wrapper-view__dragHandleWrapper--SnnuCPei\" contenteditable=\"false\"><div class=\"node-wrapper-view__button--QFFfYqkA\" draggable=\"true\" data-drag-handle=\"\"><svg xmlns=\"http://www.w3.org/2000/svg\" class=\"pkb-icon__host--RM9zRTSM\" width=\"16\" height=\"16\"><use xlink:href=\"#icon--ui__sorting-burger_16\"></use></svg></div></div></div><div class=\"node-wrapper-view__content--YBpn9eXj\"><h2 data-node-view-content=\"\" class=\"node-heading-first-view__host--SPvo2eEh\" style=\"white-space: pre-wrap;\">Section heading</h2></div></div><div class=\"node-wrapper-view__host--x6bdZ_Cf\" data-node-view-wrapper=\"\" data-focus=\"false\" style=\"white-space: normal;\"><!--v-if--><div><div class=\"node-wrapper-view__dragHandleWrapper--SnnuCPei\" contenteditable=\"false\"><div class=\"node-wrapper-view__button--QFFfYqkA\" draggable=\"true\" data-drag-handle=\"\"><svg xmlns=\"http://www.w3.org/2000/svg\" class=\"pkb-icon__host--RM9zRTSM\" width=\"16\" height=\"16\"><use xlink:href=\"#icon--ui__sorting-burger_16\"></use></svg></div></div></div><div class=\"node-wrapper-view__content--YBpn9eXj\"><p data-node-view-content=\"\" class=\"node-paragraph-view__content--hRxcjf1f\" style=\"white-space: pre-wrap;\">Plain <b>bold</b> and <i>italic</i> text.</p></div></div><div class=\"node-wrapper-view__host--x6bdZ_Cf\" data-node-view-wrapper=\"\" data-focus=\"false\" style=\"white-space: normal;\"><!--v-if--><div><div class=\"node-wrapper-view__dragHandleWrapper--SnnuCPei\" contenteditable=\"false\"><div class=\"node-wrapper-view__button--QFFfYqkA\" draggable=\"true\" data-drag-handle=\"\"><svg xmlns=\"http://www.w3.org/2000/svg\" class=\"pkb-icon__host--RM9zRTSM\" width=\"16\" height=\"16\"><use xlink:href=\"#icon--ui__sorting-burger_16\"></use></svg></div></div></div><div class=\"node-wrapper-view__content--YBpn9eXj node-bullet-list-view__wrapper--KxE9yNDZ\"><ul data-node-view-content=\"\" class=\"node-bullet-list-view__list--dK0sS12u\" data-drop=\"false\" style=\"white-space: pre-wrap;\"><li><div class=\"\" data-node-view-wrapper=\"\" style=\"white-space: normal;\"><p data-node-view-content=\"\" class=\"\" style=\"white-space: pre-wrap;\">first</p></div></li><li><div class=\"\" data-node-view-wrapper=\"\" style=\"white-space: normal;\"><p data-node-view-content=\"\" class=\"\" style=\"white-space: pre-wrap;\">second</p></div></li></ul></div></div><div class=\"node-wrapper-view__host--x6bdZ_Cf\" data-node-view-wrapper=\"\" data-focus=\"false\" style=\"white-space: normal;\"><!--v-if--><div><div class=\"node-wrapper-view__dragHandleWrapper--SnnuCPei\" contenteditable=\"false\"><div class=\"node-wrapper-view__button--QFFfYqkA\" draggable=\"true\" data-drag-handle=\"\"><svg xmlns=\"http://www.w3.org/2000/svg\" class=\"pkb-icon__host--RM9zRTSM\" width=\"16\" height=\"16\"><use xlink:href=\"#icon--ui__sorting-burger_16\"></use></svg></div></div></div><div class=\"node-wrapper-view__content--YBpn9eXj node-ordered-list-view__wrapper--YlMtsqgD\"><ol data-node-view-content=\"\" class=\"node-ordered-list-view__list--MSpVKVCA\" data-drop=\"false\" style=\"white-space: pre-wrap;\"><li><div class=\"\" data-node-view-wrapper=\"\" style=\"white-space: normal;\"><p data-node-view-content=\"\" class=\"\" style=\"white-space: pre-wrap;\">one</p></div></li><li><div class=\"\" data-node-view-wrapper=\"\" style=\"white-space: normal;\"><p data-node-view-content=\"\" class=\"\" style=\"white-space: pre-wrap;\">two</p></div></li></ol></div></div><div class=\"node-wrapper-view__host--x6bdZ_Cf\" data-node-view-wrapper=\"\" data-focus=\"false\" style=\"white-space: normal;\"><!--v-if--><div><div class=\"node-wrapper-view__dragHandleWrapper--SnnuCPei\" contenteditable=\"false\"><div class=\"node-wrapper-view__button--QFFfYqkA\" draggable=\"true\" data-drag-handle=\"\"><svg xmlns=\"http://www.w3.org/2000/svg\" class=\"pkb-icon__host--RM9zRTSM\" width=\"16\" height=\"16\"><use xlink:href=\"#icon--ui__sorting-burger_16\"></use></svg></div></div></div><div class=\"node-wrapper-view__content--YBpn9eXj node-blockquote-view__wrapper--sh7luUw4\"><blockquote data-node-view-content=\"\" style=\"white-space: pre-wrap;\"><div class=\"\" data-node-view-wrapper=\"\" style=\"white-space: normal;\"><p data-node-view-content=\"\" class=\"\" style=\"white-space: pre-wrap;\">A quoted line.</p></div></blockquote></div></div><div class=\"node-wrapper-view__host--x6bdZ_Cf\" data-node-view-wrapper=\"\" data-focus=\"false\" style=\"white-space: normal;\"><!--v-if--><div><div class=\"node-wrapper-view__dragHandleWrapper--SnnuCPei\" contenteditable=\"false\"><div class=\"node-wrapper-view__button--QFFfYqkA\" draggable=\"true\" data-drag-handle=\"\"><svg xmlns=\"http://www.w3.org/2000/svg\" class=\"pkb-icon__host--RM9zRTSM\" width=\"16\" height=\"16\"><use xlink:href=\"#icon--ui__sorting-burger_16\"></use></svg></div></div></div><div class=\"node-wrapper-view__content--YBpn9eXj\"><p data-node-view-content=\"\" class=\"node-paragraph-view__content--hRxcjf1f\" style=\"white-space: pre-wrap;\">After quote.</p></div></div><div class=\"node-wrapper-view__host--x6bdZ_Cf\" data-node-view-wrapper=\"\" data-focus=\"false\" style=\"white-space: normal;\"><!--v-if--><div><!--v-if--></div><div class=\"node-wrapper-view__content--YBpn9eXj\"><p data-node-view-content=\"\" class=\"node-paragraph-view__content--hRxcjf1f\" style=\"white-space: pre-wrap;\"><br class=\"ProseMirror-trailingBreak\"></p></div></div>",
+  "paste_node_counts": {
+    "h1": 0,
+    "h2": 1,
+    "h3": 0,
+    "p": 8,
+    "ul": 1,
+    "ol": 1,
+    "li": 4,
+    "blockquote": 1,
+    "b": 1,
+    "i": 1
+  },
+  "floating_present": true,
+  "insert_menu_items": []
+}

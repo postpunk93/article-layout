@@ -1,0 +1,12 @@
+{
+  "before": {
+    "file_inputs": [],
+    "modals": []
+  },
+  "after_photo_click": {
+    "file_inputs": [],
+    "modals": []
+  },
+  "editor_tail_html": "<div class=\"node-wrapper-view__host--x6bdZ_Cf\" data-node-view-wrapper=\"\" data-focus=\"false\" data-placeholder=\"Используйте Shift + Enter для перехода на новую строку без отступа\" style=\"white-space: normal;\"><!--v-if--><div><!--v-if--></div><div class=\"node-wrapper-view__content--YBpn9eXj\"><p data-node-view-content=\"\" class=\"node-paragraph-view__content--hRxcjf1f\" style=\"white-space: pre-wrap;\"><br class=\"ProseMirror-trailingBreak\"></p></div></div>",
+  "photo_related": []
+}

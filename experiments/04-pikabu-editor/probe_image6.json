@@ -1,0 +1,24 @@
+{
+  "image_file": "C:\\Projects\\article-layout\\example\\lists-quotes\\images\\image1.png",
+  "uploads": [
+    {
+      "method": "GET",
+      "url": "https://pikabu.ru/ajax.php?route=ws/get-upload-file-token",
+      "ct": ""
+    }
+  ],
+  "after_paste_img_count": 1,
+  "after_paste_img": {
+    "src": "blob:https://pikabu.ru/ca326658-d9e6-4a89-b643-7fe6cc6525e9",
+    "isData": false,
+    "wrapperCls": "node-image-loader-view__image--VnywkAzm",
+    "wrapperHtml": "<img class=\"node-image-loader-view__image--VnywkAzm\" src=\"blob:https://pikabu.ru/ca326658-d9e6-4a89-b643-7fe6cc6525e9\" alt=\"\">"
+  },
+  "final_img": {
+    "src": "https://cs19.pikabu.ru/s/2026/05/29/15/dj4txibz.jpg",
+    "isData": false,
+    "wrapperCls": "node-image-view__image--Q0aSYpTB",
+    "wrapperHtml": "<img class=\"node-image-view__image--Q0aSYpTB\" src=\"https://cs19.pikabu.ru/s/2026/05/29/15/dj4txibz.jpg\" width=\"700\" height=\"317\" alt=\"\">"
+  },
+  "uploaded_to_http": true
+}

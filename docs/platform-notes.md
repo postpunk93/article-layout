@@ -29,7 +29,8 @@ contenteditable. Heading levels are encoded in a class (`editor-header-tool--h2`
 
 ### Navigation & auth
 - Open the editor directly: `https://vc.ru/?modal=editor` (the new-post modal).
-- Auth persists in the `.vc-profile` persistent context after a one-time manual login.
+- Auth persists in the `.profiles/<client>/vc/` persistent context after a one-time
+  manual login (`python cli.py login <client> vc`).
 - Draft autosaves: once body content exists, the URL gains `&action=edit&id=<NNN>`.
   Detect a saved draft by waiting for `id=` in the URL.
 
@@ -95,7 +96,7 @@ two levels: `<h2>` → «Заголовок 1» (`node-heading-first-view__host`
 
 ### Navigation & auth
 - New-post page: `https://pikabu.ru/add` (always a fresh post; never restores a draft).
-- Auth persists in `.pikabu-profile`.
+- Auth persists in `.profiles/<client>/pikabu/` (`python cli.py login <client> pikabu`).
 - A saved draft lives at `https://pikabu.ru/drafts`.
 
 ### Confirmed selectors

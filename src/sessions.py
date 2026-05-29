@@ -8,7 +8,6 @@ in a `meta.json` beside the context. Liveness is never cached: `is_alive`
 probes the live site every time.
 """
 import json
-import time
 from pathlib import Path
 
 from src import vc_adapter, pikabu_adapter

@@ -63,15 +63,18 @@ H2/H3 headings and bullet/ordered lists survive a single paste. Validated end-to
 on `in/lists-quotes` (72 body blocks, 1 quote, 10 images, 15 bold/italic runs).
 
 Sequence that actually works (order is load-bearing):
-1. Type the title.
-2. Put the body HTML on the real clipboard via `navigator.clipboard.write` with a
+1. Put the body HTML on the real clipboard via `navigator.clipboard.write` with a
    `text/html` Blob — our CLEAN html. (`grant_permissions(["clipboard-write"])` first.
    Do NOT use `execCommand('copy')` of a styled offscreen div: the browser bloats that
    to ~6× with inline styles and the editor under-segments it.)
-3. Re-focus the title, `End`, `Enter` → moves the caret INTO the body and creates the
-   first body block. The title is its own `.ce-block`, so a `Ctrl+V` while the caret
-   is in the title pastes the whole article into the TITLE — you must move into the
-   body first.
+2. Click the title and TYPE it. Typing leaves the caret at the title's true end.
+3. `Enter` → moves the caret INTO the body and creates the first body block. The title
+   is its own `.ce-block`, so a `Ctrl+V` while the caret is in the title pastes the
+   whole article into the TITLE — you must move into the body first.
+   > Do NOT press `End` before `Enter`. A long title wraps to multiple lines and `End`
+   > goes to the end of the current visual LINE, so `Enter` splits the title mid-way
+   > (first line stays in the title, the rest becomes the first body paragraph). Set
+   > the clipboard BEFORE typing so no JS runs between the title and the paste.
 4. `Ctrl+V` with NO JS in between (any JS that touches the selection drops the body
    caret and the paste no-ops).
 

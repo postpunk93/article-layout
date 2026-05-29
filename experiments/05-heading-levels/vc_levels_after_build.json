@@ -1,0 +1,25 @@
+{
+  "rootFound": true,
+  "blocks": [
+    {
+      "text": "Разведка: уровни заголовков",
+      "html": "<div><div class=\"editor-header-tool editor-header-tool--h2\"><div contenteditable=\"true\" data-gramm=\"false\" data-placeholder=\"Заголовок\" class=\"editor-tool-input editor-tool-input--multiline editor-too"
+    },
+    {
+      "text": "Подзаголовок уровня два",
+      "html": "<div><div class=\"editor-header-tool editor-header-tool--h2\"><div contenteditable=\"true\" data-gramm=\"false\" data-placeholder=\"Подзаголовок\" class=\"editor-tool-input editor-tool-input--multiline editor-"
+    },
+    {
+      "text": "Абзац под H2.",
+      "html": "<div class=\"editor-text-tool\" contenteditable=\"true\" data-placeholder=\"Нажмите Tab для выбора инструмента\" data-gramm=\"false\">Абзац под H2.</div>"
+    },
+    {
+      "text": "Подзаголовок уровня три",
+      "html": "<div><div class=\"editor-header-tool editor-header-tool--h3\"><div contenteditable=\"true\" data-gramm=\"false\" data-placeholder=\"Подзаголовок\" class=\"editor-tool-input editor-tool-input--multiline editor-"
+    },
+    {
+      "text": "Абзац под H3.​",
+      "html": "<div class=\"editor-text-tool\" contenteditable=\"true\" data-placeholder=\"Нажмите Tab для выбора инструмента\" data-gramm=\"false\">Абзац под H3.​</div>"
+    }
+  ]
+}

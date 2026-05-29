@@ -81,3 +81,43 @@ def test_block_order_preserved_p_h2_p():
     doc = parse(ORDERED)
     kinds = [(type(b).__name__, "".join(r.text for r in b.runs)) for b in doc.blocks]
     assert kinds == [("Paragraph", "one"), ("Heading", "mid"), ("Paragraph", "two")]
+
+
+H3_DOC = """
+<html><head><style>.c0{font-weight:400;font-style:normal}</style></head><body>
+<h1 class="c6"><span class="c0">Title</span></h1>
+<h2 class="c2"><span class="c0">Section</span></h2>
+<h3 class="c3"><span class="c0">Subsection</span></h3>
+<p class="c4"><span class="c0">body</span></p>
+</body></html>
+"""
+
+# chernika-style doc: H3 used with no H2 above it. Content must NOT be dropped.
+H3_ONLY = """
+<html><head><style>.c0{font-weight:400;font-style:normal}</style></head><body>
+<h1 class="c6"><span class="c0">T</span></h1>
+<h3 class="c3"><span class="c0">Lonely sub</span></h3>
+<p class="c4"><span class="c0">body</span></p>
+</body></html>
+"""
+
+
+def test_h3_becomes_heading_level_3():
+    doc = parse(H3_DOC)
+    h3 = doc.blocks[1]
+    assert isinstance(h3, Heading)
+    assert h3.level == 3
+    assert h3.runs[0].text == "Subsection"
+
+
+def test_h2_and_h3_levels_and_order_preserved():
+    doc = parse(H3_DOC)
+    kinds = [(type(b).__name__, getattr(b, "level", None)) for b in doc.blocks]
+    assert kinds == [("Heading", 2), ("Heading", 3), ("Paragraph", None)]
+
+
+def test_h3_without_h2_is_still_parsed():
+    doc = parse(H3_ONLY)
+    assert isinstance(doc.blocks[0], Heading)
+    assert doc.blocks[0].level == 3
+    assert doc.blocks[0].runs[0].text == "Lonely sub"

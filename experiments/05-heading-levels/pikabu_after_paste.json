@@ -1,0 +1,19 @@
+{
+  "count": {
+    "h1": 0,
+    "h2": 1,
+    "h3": 1
+  },
+  "headings": [
+    {
+      "tag": "h2",
+      "className": "node-heading-first-view__host--SPvo2eEh",
+      "text": "Level two"
+    },
+    {
+      "tag": "h3",
+      "className": "node-heading-second-view__host--EQO5bRg4",
+      "text": "Level three"
+    }
+  ]
+}

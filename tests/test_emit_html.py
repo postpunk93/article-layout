@@ -82,3 +82,8 @@ def test_quote_emits_blockquote_with_escaping():
     doc = Document(title="T", blocks=[Quote(runs=[Run("q < x", False, False)])])
     html = emit_body(doc)
     assert "<blockquote>q &lt; x</blockquote>" in html
+
+
+def test_emit_heading_level_3():
+    doc = Document(title="t", blocks=[Heading(level=3, runs=[Run("Sub", False, False)])])
+    assert "<h3>Sub</h3>" in emit_body(doc)

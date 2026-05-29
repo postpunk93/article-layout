@@ -69,11 +69,12 @@ def _open_toolbox(page):
     page.wait_for_selector(TOOLBOX_OPEN_SEL, timeout=5000)
 
 
-def _insert_heading(page, runs):
+def _insert_heading(page, runs, level):
     _open_toolbox(page)
-    # The first [data-type="header"] toolbox item is H2.
+    # Header toolbox items, in document order: [0]="Подзаголовок H2", [1]="Подзаголовок H3".
+    idx = 0 if level <= 2 else 1
     page.eval_on_selector_all(
-        '.ce-toolbox__item[data-type="header"]', "els => els[0].click()"
+        '.ce-toolbox__item[data-type="header"]', f"els => els[{idx}].click()"
     )
     time.sleep(0.4)
     _type_runs(page, runs)
@@ -187,7 +188,7 @@ def build_document(page, doc, images_dir: Path, log=print):
     for i, block in enumerate(doc.blocks):
         if isinstance(block, Heading):
             log(f"[{i}] heading: {''.join(r.text for r in block.runs)[:50]!r}")
-            _insert_heading(page, block.runs)
+            _insert_heading(page, block.runs, block.level)
         elif isinstance(block, Paragraph):
             log(f"[{i}] paragraph ({len(block.runs)} runs)")
             _type_runs(page, block.runs)

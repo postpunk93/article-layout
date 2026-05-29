@@ -22,6 +22,11 @@ order:
 
 So: `idx = 0 if level <= 2 else 1`. (Full toolbox dump in `vc_toolbox.json`.)
 
+**Task 3 verified end-to-end** (`verify_vc_levels.py` → `vc_levels_after_build.json`):
+building the minimal H1/H2/H3 doc, the source H2 renders as a block with class
+`editor-header-tool--h2` and the source H3 as `editor-header-tool--h3`. VC heading
+blocks are NOT semantic `<h2>/<h3>` tags — the level lives in the `--hN` class.
+
 ## Pikabu — does `<h3>` survive paste?
 
 Decides whether Task 4 needs a per-node fallback.

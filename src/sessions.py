@@ -59,15 +59,15 @@ def write_meta(client: str, platform: str, updates: dict, root: Path = PROFILES_
 PLATFORMS = {
     "vc": {
         "build_document": vc_adapter.build_document,
-        "editor_url": "https://vc.ru/?modal=editor",
+        "editor_url": vc_adapter.EDITOR_URL,
         # The title field only renders inside the editor when logged in.
-        "alive_marker": 'div.editor-tool-input[data-placeholder="Заголовок"]',
+        "alive_marker": vc_adapter.TITLE_SEL,
     },
     "pikabu": {
         "build_document": pikabu_adapter.build_document,
-        "editor_url": "https://pikabu.ru/add",
+        "editor_url": pikabu_adapter.ADD_URL,
         # The Tiptap editor body only mounts for a logged-in user.
-        "alive_marker": ".tiptap.ProseMirror",
+        "alive_marker": pikabu_adapter.BODY_SEL,
     },
 }
 

@@ -34,6 +34,22 @@ SETTINGS_TOGGLER_SEL = ".ce-block-action__settings-toggler"
 ORDERED_TUNE_LABEL = "Нумерованный"
 
 
+def format_segments(runs):
+    """Map runs to [(start, end, bold, italic)] char ranges needing formatting.
+
+    Offsets are into the concatenated run text (what the pasted block contains).
+    Runs with no bold/italic — and empty runs — produce no segment.
+    """
+    segments = []
+    pos = 0
+    for r in runs:
+        end = pos + len(r.text)
+        if r.text and (r.bold or r.italic):
+            segments.append((pos, end, r.bold, r.italic))
+        pos = end
+    return segments
+
+
 def _type_runs(page, runs):
     """Type runs, toggling bold/italic via Ctrl+B / Ctrl+I per run."""
     for r in runs:

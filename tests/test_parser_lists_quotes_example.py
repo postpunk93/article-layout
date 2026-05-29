@@ -3,7 +3,7 @@ from pathlib import Path
 from src.parser import parse
 from src.ir import ListBlock, Quote
 
-doc = parse(Path("example/lists-quotes/index.html").read_text(encoding="utf-8"))
+doc = parse(Path("tests/fixtures/lists-quotes/index.html").read_text(encoding="utf-8"))
 LISTS = [b for b in doc.blocks if isinstance(b, ListBlock)]
 QUOTES = [b for b in doc.blocks if isinstance(b, Quote)]
 

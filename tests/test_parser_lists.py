@@ -1,5 +1,5 @@
 from src.parser import parse
-from src.ir import ListBlock, Paragraph
+from src.ir import ListBlock
 
 HTML = """
 <html><head><style>

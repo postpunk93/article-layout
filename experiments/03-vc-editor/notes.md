@@ -131,15 +131,19 @@ findings captured in `experiments/03-vc-editor/capture/v*.{html,png}`.
 ### QUOTE tool (`data-type="quote"`)
 - Block markup: `<div class="editor-quote-tool">` containing TWO contenteditable
   fields:
-  - **Body** (where the quote text goes): `.editor-quote-tool .editor-tool-input--text-lg`
-    (multiline; placeholder "Текст цитаты"). It wraps typed text in `<p>`.
+  - **Body** (where the quote text goes): the multiline field. SUPERSEDED during
+    the adapter build — its size class flips between `--text-xl` (empty/short) and
+    `--text-lg` (longer), so match on the stable `--multiline`:
+    `.editor-quote-tool .editor-tool-input--multiline`. It wraps typed text in `<p>`.
   - **Author/source**: `.editor-quote-tool .editor-tool-input--text-sm`
     (placeholder "Источник"). LEAVE EMPTY — GDoc has no author concept.
     (NB: `--text-sm` is the same class used by an image caption; scope by
     `.editor-quote-tool` to disambiguate.)
-- After inserting, focus the body field and type. The body is multiline, so a
-  single Enter inserts a newline INSIDE the quote; double-Enter exits to a new
-  paragraph block below (blocks count confirmed it creates the next block).
+- After inserting, focus the body field and type. The body is multiline, so Enter
+  there only inserts a newline INSIDE the quote — it does NOT exit. SUPERSEDED:
+  to leave the quote, focus the single-line author (`--text-sm`) field and press
+  Enter (like an image caption); the author stays empty. (The earlier double-Enter
+  hypothesis was wrong — it just stacks `<p>` newlines and absorbs the next block.)
 
 ### Block settings gear (general)
 - The per-block gear is `.ce-block-action__settings-toggler` (inside

@@ -98,7 +98,12 @@ def _runs_text(runs):
 
 def _parse_list(el, italic_classes, bold_classes):
     """Turn a <ul>/<ol> into a ListBlock. Inline formatting preserved per item;
-    empty items dropped."""
+    empty items dropped.
+
+    v1 assumption: each <li>'s text lives in <span> children directly under the
+    <li> (as the observed GDoc export produces). Items whose spans are wrapped
+    in a child block, and nested <ul>/<ol> inside an <li>, are not handled —
+    they would yield no runs and be silently dropped (flat-lists-only scope)."""
     items = []
     for li in el.find_all("li", recursive=False):
         runs = _merge_spans(li.find_all("span", recursive=False), italic_classes, bold_classes)

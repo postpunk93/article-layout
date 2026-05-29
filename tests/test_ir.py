@@ -16,3 +16,21 @@ def test_document_holds_title_and_blocks():
     assert doc.blocks[1].runs[1].italic is True
     assert doc.blocks[2].caption is None
     assert doc.blocks[3].caption[0].text == "cap"
+
+
+from src.ir import ListItem, ListBlock, Quote
+
+
+def test_listblock_holds_ordered_flag_and_items():
+    lb = ListBlock(ordered=True, items=[
+        ListItem(runs=[Run("first", False, False)]),
+        ListItem(runs=[Run("second", True, False)]),
+    ])
+    assert lb.ordered is True
+    assert len(lb.items) == 2
+    assert lb.items[1].runs[0].bold is True
+
+
+def test_quote_holds_runs():
+    q = Quote(runs=[Run("quoted", False, False)])
+    assert q.runs[0].text == "quoted"

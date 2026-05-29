@@ -119,7 +119,7 @@ def parse(html: str) -> Document:
     body = soup.find("body")
     title = ""
     blocks = []
-    for el in body.find_all(["h1", "h2", "p", "ul", "ol"], recursive=False):
+    for el in body.find_all(["h1", "h2", "h3", "p", "ul", "ol"], recursive=False):
         if el.name in ("ul", "ol"):
             lb = _parse_list(el, italic_classes, bold_classes)
             if lb.items:
@@ -143,8 +143,8 @@ def parse(html: str) -> Document:
             if not title:
                 title = _runs_text(runs)
             continue
-        if el.name == "h2":
-            blocks.append(Heading(level=2, runs=runs))
+        if el.name in ("h2", "h3"):
+            blocks.append(Heading(level=int(el.name[1]), runs=runs))
         else:
             if el.name == "p" and _is_yellow_quote(el, yellow_classes):
                 blocks.append(Quote(runs=runs))

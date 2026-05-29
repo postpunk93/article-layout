@@ -64,6 +64,78 @@ def _type_runs(page, runs):
             page.keyboard.press("Control+b")
 
 
+def _paste_via_clipboard(page, html, expected_blocks):
+    """Put body HTML on the real clipboard and paste it with a genuine Ctrl+V.
+
+    Editor.js treats a real paste (unlike a synthetic ClipboardEvent) like a manual
+    paste, so paragraphs/headings/lists survive. strong/em and quotes do not — they
+    are restored in later passes.
+    """
+    page.evaluate(
+        """(html) => {
+            const div = document.createElement('div');
+            div.contentEditable = 'true';
+            div.style.cssText = 'position:fixed;left:-9999px;top:0;opacity:0';
+            div.innerHTML = html;
+            document.body.appendChild(div);
+            const r = document.createRange();
+            r.selectNodeContents(div);
+            const s = window.getSelection();
+            s.removeAllRanges();
+            s.addRange(r);
+            document.execCommand('copy');
+            s.removeAllRanges();
+            div.remove();
+        }""",
+        html,
+    )
+    # Put the caret inside the body, then paste for real.
+    page.locator(".codex-editor .ce-block").first.click()
+    page.keyboard.press("Control+V")
+    # Wait for the pasted blocks to materialise (best-effort; mapping is validated later).
+    try:
+        page.wait_for_function(
+            "(n) => document.querySelectorAll('.codex-editor .ce-block').length >= n",
+            arg=expected_blocks,
+            timeout=15000,
+        )
+    except Exception:
+        pass
+
+
+def _select_range(page, container_selector, start, end):
+    """Select [start, end) chars within the element matched by container_selector.
+
+    Walks the element's text nodes by cumulative length to build a DOM Range, then
+    sets it as the window selection so a following Ctrl+B/Ctrl+I formats it.
+    """
+    page.evaluate(
+        """({sel, start, end}) => {
+            const root = document.querySelector(sel);
+            if (!root) return false;
+            const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+            let node, acc = 0, range = document.createRange(), setStart = false;
+            while ((node = walker.nextNode())) {
+                const len = node.textContent.length;
+                if (!setStart && acc + len >= start) {
+                    range.setStart(node, start - acc);
+                    setStart = true;
+                }
+                if (setStart && acc + len >= end) {
+                    range.setEnd(node, end - acc);
+                    const s = window.getSelection();
+                    s.removeAllRanges();
+                    s.addRange(range);
+                    return true;
+                }
+                acc += len;
+            }
+            return false;
+        }""",
+        {"sel": container_selector, "start": start, "end": end},
+    )
+
+
 def _open_toolbox(page):
     # Anchor the toolbar to the current (last) block with a REAL click first.
     # After a list/quote the trailing empty paragraph carries a stray zero-width

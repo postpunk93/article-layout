@@ -22,6 +22,12 @@ EDITOR_URL = "https://vc.ru/?modal=editor"
 TITLE_SEL = 'div.editor-tool-input[data-placeholder="Заголовок"]'
 TOOLBOX_OPEN_SEL = ".ce-popover.ce-toolbox.opened"
 CAPTION_SEL = ".editor-tool-input--text-sm"
+LIST_SEL = ".editor-list-tool"
+LIST_ORDERED_SEL = ".editor-list-tool.editor-list-tool--ordered"
+QUOTE_BODY_SEL = ".editor-quote-tool .editor-tool-input--text-lg"
+BLOCK_SETTINGS_ITEM_SEL = ".ce-block-settings__item"
+SETTINGS_TOGGLER_SEL = ".ce-block-action__settings-toggler"
+ORDERED_TUNE_LABEL = "Нумерованный"
 
 
 def _type_runs(page, runs):
@@ -88,47 +94,61 @@ def _insert_image(page, image_path, caption_runs):
         page.keyboard.type("".join(r.text for r in caption_runs))
 
 
-def _insert_list(page, list_block):
+def _insert_list(page, list_block, is_last=False):
     _open_toolbox(page)
     page.eval_on_selector('.ce-toolbox__item[data-type="list"]', "el => el.click()")
-    time.sleep(0.4)
+    page.wait_for_selector(LIST_SEL, timeout=8000)
     # type items; Enter starts a new <li>. No trailing Enter after the last item yet.
     for idx, item in enumerate(list_block.items):
         if idx:
             page.keyboard.press("Enter")
         _type_runs(page, item.runs)
-    # ordered? toggle via the block settings gear -> "Нумерованный" tune.
+    # ordered? toggle via the block settings gear -> ORDERED_TUNE_LABEL tune.
     if list_block.ordered:
         page.eval_on_selector(
-            ".editor-list-tool",
-            "el => el.closest('.ce-block').querySelector('.ce-block-action__settings-toggler').click()",
+            LIST_SEL,
+            f"el => el.closest('.ce-block').querySelector('{SETTINGS_TOGGLER_SEL}').click()",
         )
-        page.wait_for_selector(".ce-block-settings__item", timeout=5000)
+        page.wait_for_selector(BLOCK_SETTINGS_ITEM_SEL, timeout=5000)
         page.eval_on_selector_all(
-            ".ce-block-settings__item",
-            "els => { const it = els.find(e => (e.innerText||'').includes('Нумерованный')); if (it) it.click(); }",
+            BLOCK_SETTINGS_ITEM_SEL,
+            f"els => {{ const it = els.find(e => (e.innerText||'').includes('{ORDERED_TUNE_LABEL}')); if (it) it.click(); }}",
         )
         # confirm the modifier class applied, then close the tune popover
-        page.wait_for_selector(".editor-list-tool.editor-list-tool--ordered", timeout=5000)
+        page.wait_for_selector(LIST_ORDERED_SEL, timeout=5000)
         page.keyboard.press("Escape")
-        time.sleep(0.2)
-        page.locator(".editor-list-tool").last.click()  # re-focus the list
-    # exit the list into a fresh paragraph block below (double-Enter on empty item)
-    page.keyboard.press("End")
-    page.keyboard.press("Enter")
-    page.keyboard.press("Enter")
+        # Re-focus the list with the caret collapsed to the end of the last <li>
+        # of the last list, so the exit double-Enter reliably leaves the block.
+        page.eval_on_selector_all(LIST_SEL, """els => {
+            const el = els[els.length - 1];
+            const li = el.lastElementChild || el;
+            const r = document.createRange();
+            r.selectNodeContents(li);
+            r.collapse(false);
+            const s = getSelection();
+            s.removeAllRanges();
+            s.addRange(r);
+            el.focus();
+        }""")
+    # exit the list into a fresh paragraph block below (double-Enter on empty item).
+    # Skip when this is the last block, or we'd leave a trailing empty paragraph.
+    if not is_last:
+        page.keyboard.press("Enter")
+        page.keyboard.press("Enter")
     time.sleep(0.3)
 
 
-def _insert_quote(page, quote):
+def _insert_quote(page, quote, is_last=False):
     _open_toolbox(page)
     page.eval_on_selector('.ce-toolbox__item[data-type="quote"]', "el => el.click()")
-    time.sleep(0.4)
-    page.locator(".editor-quote-tool .editor-tool-input--text-lg").last.click()
+    page.wait_for_selector(QUOTE_BODY_SEL, timeout=8000)
+    page.locator(QUOTE_BODY_SEL).last.click()
     _type_runs(page, quote.runs)   # author field (.--text-sm) left empty
-    # exit the quote into a fresh paragraph block below
-    page.keyboard.press("Enter")
-    page.keyboard.press("Enter")
+    # exit the quote into a fresh paragraph block below. Skip when this is the
+    # last block, or we'd leave a trailing empty paragraph.
+    if not is_last:
+        page.keyboard.press("Enter")
+        page.keyboard.press("Enter")
     time.sleep(0.3)
 
 
@@ -161,10 +181,10 @@ def build_document(page, doc, images_dir: Path, log=print):
             _insert_image(page, path, block.caption)
         elif isinstance(block, ListBlock):
             log(f"[{i}] list ordered={block.ordered} items={len(block.items)}")
-            _insert_list(page, block)
+            _insert_list(page, block, is_last=(i == last))
         elif isinstance(block, Quote):
             log(f"[{i}] quote ({len(block.runs)} runs)")
-            _insert_quote(page, block)
+            _insert_quote(page, block, is_last=(i == last))
         # Enter creates the next empty block (needed for the next heading/image's
         # toolbox, and to leave an image's caption). Skip it after the last block
         # so we don't leave a trailing empty paragraph. List/Quote ALREADY exit

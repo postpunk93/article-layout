@@ -1,18 +1,37 @@
 # 05 — Two-level heading controls (VC + Pikabu)
 
-Run the two probes (authenticated browser required), then fill in the answers below.
+Discovery for the two-level subheadings work (see
+`docs/plans/2026-05-29-heading-levels.md`). The old single-level assumption from
+experiment 04 was wrong; both platforms expose two subheading levels.
 
-- `python -m experiments.05-heading-levels.probe_vc_headings`  → `vc_toolbox.json`
-- `python -m experiments.05-heading-levels.probe_pikabu_h3`     → `pikabu_after_paste.json`
+Probes (run by hand against authenticated profiles). NOTE: run by direct path,
+not `-m` (the package name starts with a digit / has a hyphen):
+
+- `python experiments/05-heading-levels/probe_vc_headings.py`  → `vc_toolbox.json`
+- `python experiments/05-heading-levels/probe_pikabu_h3.py`     → `pikabu_after_paste.json`
 
 ## VC — selector/index for H3
 
-<!-- Which `.ce-toolbox__item` to click for «Подзаголовок H3»: the data-type and
-the index among `data-type="header"` items (expected [0]=H2, [1]=H3). This tells
-Task 4 exactly which toolbox item `_insert_heading` must click for a level-3 heading. -->
+Decides which toolbox item `vc_adapter._insert_heading` clicks per level.
+
+**Confirmed.** The `.ce-toolbox__item[data-type="header"]` items appear in DOM
+order:
+
+- index `[0]` = «Подзаголовок H2»  → source H2 (level 2)
+- index `[1]` = «Подзаголовок H3»  → source H3 (level 3)
+
+So: `idx = 0 if level <= 2 else 1`. (Full toolbox dump in `vc_toolbox.json`.)
 
 ## Pikabu — does `<h3>` survive paste?
 
-<!-- Whether the pasted `<h3>` stays a distinct second heading level («Заголовок 2»)
-or is collapsed to `<h2>` / dropped. This decides whether Task 4 needs a per-node
-fallback (e.g. emit H3 as bold/another construct) when building the Pikabu body. -->
+Decides whether Task 4 needs a per-node fallback.
+
+**Confirmed: yes, no fallback needed.** Pasting
+`<h2>Level two</h2><h3>Level three</h3>` via the adapter's synthetic-paste path
+yields `count = {h1: 0, h2: 1, h3: 1}` — both levels land as distinct nodes:
+
+- `<h2>` → `node-heading-first-view__host…` («Заголовок 1»)
+- `<h3>` → `node-heading-second-view__host…` («Заголовок 2»)
+
+`emit_html` already emits `<h{level}>`, so Pikabu needs no adapter change beyond a
+regression test that `emit_body` emits `<h3>` for a level-3 heading.

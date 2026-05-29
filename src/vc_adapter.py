@@ -107,10 +107,13 @@ def _select_range(page, container_selector, start, end):
     """Select [start, end) chars within the element matched by container_selector.
 
     Walks the element's text nodes by cumulative length to build a DOM Range, then
-    sets it as the window selection so a following Ctrl+B/Ctrl+I formats it.
+    sets it as the window selection so a following Ctrl+B/Ctrl+I formats it. Returns
+    True if the range was selected, False if the element/offsets could not be matched
+    (callers should skip the Ctrl+B/Ctrl+I keypress when this is False).
     """
-    page.evaluate(
+    return page.evaluate(
         """({sel, start, end}) => {
+            if (end <= start) return false;
             const root = document.querySelector(sel);
             if (!root) return false;
             const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);

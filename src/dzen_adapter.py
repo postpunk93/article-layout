@@ -8,6 +8,8 @@ need a native-upload pass; stop at autosave, never publish.
 """
 from pathlib import Path
 
+from src.emit_html import emit_body
+
 # Studio dashboard; /profile/editor/create redirects here when logged in.
 STUDIO_URL = "https://dzen.ru/profile/editor/create"
 DEBUG_PORT = 9222
@@ -21,6 +23,13 @@ IMAGE_FILE_INPUT_SEL = 'input[type=file][class*="image-popup__file"]'
 FIGCAPTION_SEL = 'figure.zen-editor-block-image figcaption'
 # Logged-in marker: the studio "+" only renders for an authenticated user.
 ALIVE_SEL = ADD_PUBLICATION_SEL
+
+
+def body_html(doc):
+    """Clean body HTML for the paste: real <blockquote> (Dzen makes a native quote
+    block), images as [[IMG:file]] markers (data-URIs error in Dzen), captions set
+    natively (no marker)."""
+    return emit_body(doc, caption_marker=False, quote_as_paragraph=False, img_sep=":")
 
 
 def build_document(page, doc, images_dir, log=print):

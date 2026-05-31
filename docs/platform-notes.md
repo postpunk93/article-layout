@@ -1,4 +1,4 @@
-# Platform notes (VC + Pikabu + Habr)
+# Platform notes (VC + Pikabu + Habr + Smartlab)
 
 Consolidated, durable findings from the platform-discovery experiments (the one-off
 probe scripts that produced these have been removed; their history is in git). This
@@ -274,6 +274,78 @@ captioned images): title set, body laid out 1:1 (9 headings, both lists, bold/it
 all 10 images auto-uploaded to habrastorage, the quote converted to a native quote
 block, both captions written into their figcaption fields, then stopped on the
 settings screen. No marker/File-paste needed.
+
+---
+
+## Smartlab — Editor.js «redaktor 4» at `/topic/add2` (VC's engine, stock classes)
+
+smart-lab.ru has **two** post editors. The legacy `/topic/add/` is TinyMCE 3.5.11
+(iframe WYSIWYG; its images go through a clumsy per-image `lseditor/image.htm` dialog).
+We target the **newer `/topic/add2`** instead — it is **Editor.js (Codex Editor)**,
+the SAME engine as VC, and it **autosaves a draft** (the natural, publish-free stop).
+Unlike the VC adapter (which pastes the body and restores lost formatting with
+keyboard passes), add2 exposes the live Editor.js instance as **`window.editor`**, so
+we build the body **deterministically via its JS API** (`clear()` + `render()`) — no
+clipboard, no fragile restore passes, no block-count mapping. Only images can't go
+through `render()` (they need an uploaded URL), so they keep VC's marker→native-upload
+flow. Selectors are stock Editor.js (`cdx-*` / `ce-popover-item`), not VC's customized ones.
+
+### Navigation & auth
+- New-post editor: `https://smart-lab.ru/topic/add2` (holder `.codex-editor`).
+- Auth is an **ordinary login/password** — STANDARD Playwright login flow (no captcha
+  under CDP, unlike Habr): `python cli.py login <client> smartlab`.
+- The editor mounts only for a logged-in user, so `.codex-editor` is the liveness marker.
+- **add2 autosaves**: a background `POST https://smart-lab.ru/topic/autosave2/add/topic/`
+  fires as you edit — this is the saved-draft signal (no save/publish button needed).
+
+### Confirmed selectors / structure (stock Editor.js v2)
+- **Live instance**: `window.editor` (has `clear()`, `render({blocks})`, `blocks`, `save()`).
+- **Title = the FIRST `.ce-block`** — `render()`ing a `header` level-1 block makes it an
+  `h1.ce-header` (placeholder «Заголовок»); body headings are level 2-6.
+- **Toolbox** (used only for image insertion): open with `.ce-toolbar__plus` (JS-click;
+  0-size until hover, as on VC); opened popover is `.ce-popover--opened`; items are
+  `.ce-popover-item[data-item-name="…"]`. Confirmed names: `paragraph`, `header`,
+  **`image`**, `list`, `checklist`, `quote`, `warning`, `code`, `delimiter`, `linkTool`,
+  `table`.
+- **Image caption**: `.image-tool__caption` (a `.cdx-input`, placeholder «Caption»).
+- **Publish (NEVER click)**: an `<li>` with text «Опубликовать». No click is needed to
+  save — autosave handles it.
+
+### Body — `window.editor.clear()` then `render({blocks})` (JS API, not paste)
+add2 AUTOSAVES and RESTORES a previous draft on load, so the editor is NOT empty. The
+flow is:
+1. `await window.editor.clear()` — drop the restored draft (leaves one empty block).
+2. Build the blocks JSON from the IR and `await window.editor.render({blocks})`. Mapping:
+   title → `{type:'header', data:{text, level:1}}`; `Heading` → `header` (level clamped to
+   2-6); `Paragraph` → `paragraph`; `ListBlock` → `{type:'list', data:{style:'ordered'|
+   'unordered', items:[…]}}` (flat string items); `Quote` → `{type:'quote', data:{text,
+   caption:''}}` (NATIVE quote — no conversion); `Image` → a `paragraph` holding the
+   `[[IMG file]]` marker (replaced by an upload below).
+- **Inline bold/italic is rendered natively** by putting `<b>`/`<i>` inside `data.text`
+  (use `<b>`/`<i>`, NOT `<strong>`/`<em>` — the Editor.js sanitizer drops those). No
+  Ctrl+B/I restore pass, and no block-count mapping, is needed.
+
+### Images — native upload via the toolbox (marker → file chooser → caption)
+`render()` can't carry un-uploaded images, so the body holds `[[IMG file]]` markers.
+For each marker: click into its paragraph, Ctrl+A/Delete to empty it, open the toolbox,
+and `expect_file_chooser` around a JS-click of `.ce-popover-item[data-item-name="image"]`
+(the image tool fires the OS file chooser directly). `set_files(path)` → smart-lab
+uploads via `https://smart-lab.ru/include/ajax/uploadImg.php` and the `<img>` src becomes
+`https://smart-lab.ru/uploads/…` — **wait for that http(s) src** (async). Then type the
+caption into the new block's `.image-tool__caption`.
+
+### Stop point — the autosaved draft, never «Опубликовать»
+After body + images, the background autosave POST has the draft persisted. Wait for /
+confirm a `…/topic/autosave2/add/topic/` request as the saved signal, then STOP. The
+«Опубликовать» `<li>` is never clicked.
+
+### Validated end-to-end
+`in/lists-quotes` (72 IR blocks, 9 headings, 1 quote, both lists, 15 bold/italic runs,
+10 images incl. 2 captioned): after `clear()`+`render()`, the editor held exactly 73
+`.ce-block`s (title + 72) — 10 `ce-header`, 1 native `cdx-quote`, one unordered + one
+ordered `cdx-list`, 11 `<b>` + 4 `<i>`; all 10 images uploaded to `…/uploads/…` with
+zero leftover `[[IMG]]` markers, captions set on the two captioned images, and the
+autosave POST observed. Nothing published.
 
 ---
 

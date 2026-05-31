@@ -28,8 +28,6 @@ from pathlib import Path
 
 from src.ir import Heading, Paragraph, Image, ListBlock, Quote
 
-HOME_URL = "https://smart-lab.ru/"
-LOGIN_URL = "https://smart-lab.ru/login/"
 ADD_URL = "https://smart-lab.ru/topic/add2"
 
 # The editor mounts only for a logged-in user, so .codex-editor is the liveness
@@ -184,10 +182,12 @@ def build_document(page, doc, images_dir, log=print):
             lambda r: "autosave2/add/topic" in r.url and r.method == "POST",
             timeout=15000,
         ):
-            # Nudge: a tiny no-op caret move may trigger autosave; one may also be pending.
+            # Dirty a BODY block (not the title) with a no-op edit to guarantee an
+            # autosave fires: type a space, then delete it.
             try:
-                page.locator(".codex-editor .ce-block [contenteditable]").first.click()
-                page.keyboard.press("End")
+                page.locator(".codex-editor .ce-block [contenteditable]").last.click()
+                page.keyboard.type(" ")
+                page.keyboard.press("Backspace")
             except Exception:  # noqa: BLE001
                 pass
         log("Draft autosaved.")

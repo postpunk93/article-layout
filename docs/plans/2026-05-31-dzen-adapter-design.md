@@ -1,6 +1,6 @@
 # Dzen adapter — design
 
-Status: **draft (discovery in progress)** — 2026-05-31, branch `feat/dzen-adapter`.
+Status: **DONE / validated end-to-end** — 2026-06-01, branch `feat/dzen-adapter`.
 
 Fifth platform adapter on the shared `parser → IR → adapter` architecture
 (after VC, Pikabu, Habr, Smartlab). Same shape: `build_document(page, doc,
@@ -49,11 +49,32 @@ in sync when fixing selector drift (Task 9).
 | Studio "+" create button | `[data-testid="add-publication-button"]` (`ADD_PUBLICATION_SEL`, also `ALIVE_SEL`) |
 | Body block (paste/marker scan) | `[data-editor="ZenDraftEditor"][data-block="true"]` |
 | Image insert (side "+", reveal on gutter hover) | `[class*="side-button__sideButton"]` (`SIDE_BUTTON_SEL`) |
-| Image file input (in popup) | `input[type=file][class*="image-popup__file"]` (`IMAGE_FILE_INPUT_SEL`) |
+| Image upload (in popup) | click text `Загрузите файл` (`UPLOAD_BTN_TEXT`) inside `page.expect_file_chooser()` — the popup's `<input type=file>` is `display:none`, so a visibility-waiting `set_input_files` hangs |
 | Uploaded image / figure | `figure.zen-editor-block-image` (img → CDN `avatars.dzeninfra.ru`) |
-| Image caption | `figure.zen-editor-block-image figcaption` (`FIGCAPTION_SEL`) |
-| Autosave status (stop marker) | `[class*="editor-header__status"]` (`STATUS_SEL`) → match full "Все изменения сохранены" |
+| Image caption | `textarea[class*="image-caption__input"]` (`CAPTION_SEL`) — a real `<textarea>`, NOT a `<figcaption>` (that exists only on the error placeholder) |
+| Autosave status (stop marker) | `[class*="editor-header__status"]` (`STATUS_SEL`) → text is "Сохранено …"; match `/сохранен[оы]/i` (saved) which excludes "Сохранение…" (saving) |
+| Plain paragraph block | class `zen-editor-block-paragraph` (headings are `<hN>`, lists `-ul`/`-ol`, quotes `-quote`) |
 | Publish (do NOT click) | `[class*="editor-header__editBtn"]` |
+
+### Live e2e VALIDATED (2026-06-01) — corrections found during the real run
+1. **Body clear bug:** `Ctrl+A` in Draft.js selects the WHOLE editor, so clearing a marker block
+   with `Ctrl+A`+`Delete` wiped the entire pasted body. Empty only the marker line via
+   `Home`/`Shift+End`/`Delete`. Also `page.bring_to_front()` before the paste (over
+   `connect_over_cdp` a real Ctrl+V only pastes into a FOCUSED tab).
+2. **Image upload:** the popup `<input type=file>` is hidden → click "Загрузите файл" inside
+   `expect_file_chooser` (see table).
+3. **Caption:** a `<textarea>`, not `<figcaption>` (see table).
+4. **Autosave status:** text is "Сохранено меньше минуты назад", not "Все изменения сохранены";
+   matched with `/сохранен[оы]/i`.
+5. **Blank line after each image:** the emptied marker leaves a blank paragraph after the figure.
+   Strip it with click + `End` + forward-`Delete` (merges the NEXT block UP into the blank) —
+   ONLY when that next block is a `zen-editor-block-paragraph`. A `Backspace` (merge UP) would
+   delete the atomic image; merging a heading/list/quote would DEMOTE it. A blank before a heading
+   is left in place (harmless).
+
+Final acceptance (lists-quotes, 72 blocks): 9/9 headings kept, 10/10 images uploaded to CDN,
+2/2 source captions set, quote + lists native, blanks stripped except 1 before a heading,
+autosave detected, nothing published.
 
 **Body selector note:** the `aria-describedby="placeholder-ZenDraftEditor"` attribute (seen on the
 empty editor) is DROPPED once the body has content (the placeholder disappears), so the adapter

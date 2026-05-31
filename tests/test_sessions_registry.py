@@ -38,5 +38,8 @@ def test_dzen_registered_with_contract():
     assert callable(entry["build_document"])
     assert entry["editor_url"].startswith("http")
     assert entry["alive_marker"]
-    assert entry["cdp_attach"] is True
+    # Dzen logs in like Habr (non-CDP Chrome for the Yandex captcha), then reuses
+    # the profile via open_context — no cdp_attach special-casing.
+    assert entry["manual_login"] is True
+    assert "cdp_attach" not in entry
     assert "dzen" in sessions.known_platforms()

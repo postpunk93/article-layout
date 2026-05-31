@@ -18,7 +18,17 @@ images_dir, log)` + module constants, registered in `src/sessions.py:PLATFORMS`.
 
 ## Discovery findings (2026-05-31, live editor via CDP attach)
 
-### Auth — the Habr "login then reopen" scheme does NOT work for Dzen
+### Auth — UPDATE 2026-06-01: now uses the standard Habr-style flow
+The CDP-attach mechanism below was correct at discovery time, but after a full production
+login Yandex marks the device trusted and issues a **persistent** master SSO cookie, so the
+session now survives a Chrome close and the standard `open_context` reaches the logged-in
+editor (verified: `is_alive('default','dzen')` → True). Dzen was therefore converted to the
+**same flow as Habr**: `manual_login` (non-CDP Chrome for the captcha) once, then
+`open_context` for `is_alive`/`layout`. The CDP-attach code (`launch_debug_chrome`,
+`cdp_endpoint`, the `cdp_attach` branch in cli.py) was removed. The discovery notes below are
+kept as the historical record of why the live-attach approach was originally chosen.
+
+### (historical) Auth — the Habr "login then reopen" scheme did NOT work for Dzen at discovery
 - Manual login → close Chrome → reopen profile under Playwright **fails**: lands on
   `passport.yandex.ru/.../auth/add`. The master Yandex SSO cookie (`Session_id` on
   `.yandex.ru`/`passport.yandex.ru`) is **session-scoped and dropped on Chrome close**;

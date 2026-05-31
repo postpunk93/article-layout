@@ -1,10 +1,11 @@
 """Drive Yandex Dzen's article editor (Draft.js) to build an autosaved draft.
 
-See docs/plans/2026-05-31-dzen-adapter-design.md. Dzen attaches to a LIVE Chrome
-via connect_over_cdp (the master Yandex SSO cookie is session-scoped, so the
-Habr "login then reopen profile" scheme bounces to passport). One real clipboard
-paste carries headings/paragraphs/bold/italic/quotes/lists natively; only images
-need a native-upload pass; stop at autosave, never publish.
+See docs/plans/2026-05-31-dzen-adapter-design.md. Like Habr, login needs a non-CDP
+Chrome (Yandex SmartCaptcha), so the dzen platform entry sets manual_login; once the
+profile is logged in, layout/is_alive reuse it through the standard open_context
+(Yandex marks the device trusted and the session survives). One real clipboard paste
+carries headings/paragraphs/bold/italic/quotes/lists natively; only images need a
+native-upload pass; stop at autosave, never publish.
 """
 import time
 from pathlib import Path
@@ -14,7 +15,6 @@ from src.ir import Image
 
 # Studio dashboard; /profile/editor/create redirects here when logged in.
 STUDIO_URL = "https://dzen.ru/profile/editor/create"
-DEBUG_PORT = 9222
 
 ADD_PUBLICATION_SEL = '[data-testid="add-publication-button"]'   # the "+" in the studio header
 BODY_SEL = '.public-DraftEditor-content[spellcheck="true"]'      # body contenteditable (title is spellcheck=false)
@@ -74,8 +74,8 @@ def _set_clipboard(page, html):
 
 def _set_title_and_body(page, doc, log):
     log(f"Title: {doc.title!r}")
-    # Bring the tab to the foreground: over connect_over_cdp a real Ctrl+V only pastes
-    # the system clipboard into a focused tab (a background tab pastes empty).
+    # Bring the tab to the foreground: a real Ctrl+V only pastes the system clipboard
+    # into a FOCUSED tab (a background tab pastes empty).
     page.bring_to_front()
     page.click(TITLE_SEL)
     page.keyboard.type(doc.title)

@@ -99,3 +99,33 @@ def test_quote_as_paragraph_mode_renders_p():
 def test_quote_default_still_blockquote():
     doc = Document(title="T", blocks=[Quote(runs=[Run("q", False, False)])])
     assert "<blockquote>q</blockquote>" in emit_body(doc)
+
+
+def test_max_heading_level_degrades_h3_to_bold_paragraph():
+    doc = Document(
+        title="T",
+        blocks=[
+            Heading(level=2, runs=[Run("Sub", False, False)]),
+            Heading(level=3, runs=[Run("Deep", False, False)]),
+        ],
+    )
+    html = emit_body(doc, max_heading_level=2)
+    assert "<h2>Sub</h2>" in html
+    assert "<h3>" not in html
+    assert "<p><strong>Deep</strong></p>" in html
+
+
+def test_max_heading_level_default_keeps_h3():
+    doc = Document(title="T", blocks=[Heading(level=3, runs=[Run("Deep", False, False)])])
+    html = emit_body(doc)  # no max_heading_level -> unchanged behavior
+    assert "<h3>Deep</h3>" in html
+
+
+def test_max_heading_level_preserves_inline_styles_in_degraded_heading():
+    doc = Document(
+        title="T",
+        blocks=[Heading(level=3, runs=[Run("a ", False, False), Run("b", False, True)])],
+    )
+    html = emit_body(doc, max_heading_level=2)
+    # degraded heading is a bold paragraph; original italics survive nested
+    assert "<p><strong>a <em>b</em></strong></p>" in html

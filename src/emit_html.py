@@ -15,7 +15,8 @@ def _runs_html(runs):
     return "".join(out)
 
 
-def emit_body(doc, caption_marker=True, quote_as_paragraph=False, img_sep=":"):
+def emit_body(doc, caption_marker=True, quote_as_paragraph=False, img_sep=":",
+              max_heading_level=None):
     """Render IR blocks to clean body HTML.
 
     Images are NOT emitted as <img>; they become a visible marker
@@ -34,11 +35,21 @@ def emit_body(doc, caption_marker=True, quote_as_paragraph=False, img_sep=":"):
     ``[[IMG:file]]``. VC pastes via the real clipboard and its editor treats
     ``IMG:file.png`` as a ``scheme:path`` link, which ABORTS the multi-block
     paste — VC passes ``img_sep=" "`` (``[[IMG file]]``) to dodge that.
+
+    ``max_heading_level`` caps the subheading depth: a ``Heading`` deeper than
+    this level (e.g. Habr supports only ``h2``) degrades to a bold paragraph
+    ``<p><strong>…</strong></p>`` instead of an ``<hN>`` tag. Default ``None``
+    means no cap — every heading keeps its native level.
     """
     parts = []
     for b in doc.blocks:
         if isinstance(b, Heading):
-            parts.append(f"<h{b.level}>{_runs_html(b.runs)}</h{b.level}>")
+            if max_heading_level is not None and b.level > max_heading_level:
+                # Habr has one subheading level: a deeper heading degrades to a
+                # bold line (keep any inner italics) rather than an <hN> tag.
+                parts.append(f"<p><strong>{_runs_html(b.runs)}</strong></p>")
+            else:
+                parts.append(f"<h{b.level}>{_runs_html(b.runs)}</h{b.level}>")
         elif isinstance(b, Paragraph):
             parts.append(f"<p>{_runs_html(b.runs)}</p>")
         elif isinstance(b, ListBlock):

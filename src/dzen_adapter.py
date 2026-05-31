@@ -144,10 +144,17 @@ def _replace_marker_with_image(page, block, path, log):
 
 def _strip_blank_after_images(page, log):
     """Remove the blank paragraph each image insert leaves after its figure (the
-    emptied marker block). For each figure→blank→non-image triple, click the blank and
-    forward-Delete to merge the NEXT block UP into it. Forward-Delete works AWAY from
-    the atomic image above — a Backspace would merge INTO the image and DELETE it (image
-    loss). The non-image guard on the following block means we never merge a figure."""
+    emptied marker block). For each figure→blank→PARAGRAPH triple, click the blank and
+    forward-Delete to merge the next paragraph UP into it.
+
+    Two hard constraints, both load-bearing:
+    - forward-Delete (merge DOWN) keeps the atomic image above untouched; a Backspace
+      (merge UP) would merge INTO the image and DELETE it.
+    - we only merge when the block after the blank is a `zen-editor-block-paragraph`.
+      The merged block keeps the blank's PARAGRAPH type, so merging a heading/list/quote
+      there would DEMOTE it (e.g. a subheading becomes bold body text). When the next
+      block isn't a plain paragraph we leave the blank — a section break before a
+      heading is harmless, a demoted heading is not."""
     sel = "[data-editor=ZenDraftEditor][data-block=true]"
     removed = 0
     for _ in range(40):  # one pass removes one blank; guard against a stuck scan
@@ -156,9 +163,9 @@ def _strip_blank_after_images(page, log):
                 const bs = [...document.querySelectorAll(sel)];
                 for (let i = 0; i < bs.length - 2; i++) {
                     if (/zen-editor-block-image/.test(bs[i].className) &&
-                        !/zen-editor-block-image/.test(bs[i + 1].className) &&
                         (bs[i + 1].innerText || '').trim() === '' &&
-                        !/zen-editor-block-image/.test(bs[i + 2].className)) return i + 1;
+                        !/zen-editor-block-image/.test(bs[i + 1].className) &&
+                        /zen-editor-block-paragraph/.test(bs[i + 2].className)) return i + 1;
                 }
                 return -1;
             }""",

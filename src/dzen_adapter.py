@@ -102,7 +102,11 @@ def _replace_marker_with_image(page, block, path, log):
     page.keyboard.press("Control+a")
     page.keyboard.press("Delete")
     # Reveal the side "+" by hovering the block's left gutter, then click it.
+    # +10px puts the cursor just inside the left gutter where the "+" anchors.
     box = block_loc.bounding_box()
+    if not box:
+        log(f"  could not locate block gutter for {block.file} — skipping")
+        return
     page.mouse.move(box["x"] + 10, box["y"] + box["height"] / 2)
     page.wait_for_selector(SIDE_BUTTON_SEL, timeout=4000)
     n_before = page.evaluate("() => document.querySelectorAll('figure.zen-editor-block-image img').length")
@@ -148,12 +152,15 @@ def build_document(page, doc, images_dir, log=print):
         except Exception as e:  # noqa: BLE001 — report and continue
             log(f"  image {block.file} failed ({str(e)[:80]}) — marker left in body")
 
-    # Stop at the autosaved draft — NEVER click «Опубликовать».
+    # Stop at the autosaved draft — NEVER click «Опубликовать». The paste and image
+    # uploads already dirty the editor, so autosave fires on its own; we just wait for
+    # the status to read the verified "Все изменения сохранены" (match the full phrase
+    # so a transient "Сохранение…" / "saving" state doesn't satisfy it early).
     try:
         page.wait_for_function(
             """(sel) => {
                 const s = document.querySelector(sel);
-                return s && /сохранен/i.test(s.innerText || '');
+                return s && /все изменения сохранен/i.test(s.innerText || '');
             }""",
             arg=STATUS_SEL,
             timeout=20000,

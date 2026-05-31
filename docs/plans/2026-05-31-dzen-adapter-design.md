@@ -40,15 +40,28 @@ images_dir, log)` + module constants, registered in `src/sessions.py:PLATFORMS`.
   and body (`div.public-DraftEditor-content[aria-describedby="placeholder-ZenDraftEditor"]`).
 
 ### Stable selectors (CSS-module hashes like `-XK` avoided; aria/data/stable ids used)
-| Purpose | Selector |
+These are the selectors the adapter (`src/dzen_adapter.py`) actually uses — keep this table
+in sync when fixing selector drift (Task 9).
+| Purpose | Selector (constant) |
 |---|---|
-| Body | `div.public-DraftEditor-content[aria-describedby="placeholder-ZenDraftEditor"]` |
-| Title | first `.public-DraftEditor-content` (`spellcheck="false"`) |
-| Inline toolbar (on selection) | `[aria-label="Heading 2"|"Heading 3"|"Blockquote"|"ul"|"ol"|"Bold"|"Italic"|"Strike"]` |
-| Quote conversion | `[aria-label="Blockquote"]` |
-| Image insert (side "+") | `[data-tip="Добавить изображение"]` |
-| Autosave status (stop marker / alive) | `[class*="editor-header__status"]` → text "Все изменения сохранены" |
+| Body | `.public-DraftEditor-content[spellcheck="true"]` (`BODY_SEL`) |
+| Title | `.public-DraftEditor-content[spellcheck="false"]` (`TITLE_SEL`) |
+| Studio "+" create button | `[data-testid="add-publication-button"]` (`ADD_PUBLICATION_SEL`, also `ALIVE_SEL`) |
+| Body block (paste/marker scan) | `[data-editor="ZenDraftEditor"][data-block="true"]` |
+| Image insert (side "+", reveal on gutter hover) | `[class*="side-button__sideButton"]` (`SIDE_BUTTON_SEL`) |
+| Image file input (in popup) | `input[type=file][class*="image-popup__file"]` (`IMAGE_FILE_INPUT_SEL`) |
+| Uploaded image / figure | `figure.zen-editor-block-image` (img → CDN `avatars.dzeninfra.ru`) |
+| Image caption | `figure.zen-editor-block-image figcaption` (`FIGCAPTION_SEL`) |
+| Autosave status (stop marker) | `[class*="editor-header__status"]` (`STATUS_SEL`) → match full "Все изменения сохранены" |
 | Publish (do NOT click) | `[class*="editor-header__editBtn"]` |
+
+**Body selector note:** the `aria-describedby="placeholder-ZenDraftEditor"` attribute (seen on the
+empty editor) is DROPPED once the body has content (the placeholder disappears), so the adapter
+keys off the stable `spellcheck="true"` instead (title is `spellcheck="false"`).
+
+**Quote conversion is NOT needed** (paste of a real `<blockquote>` yields a native quote block),
+so the inline-toolbar `[aria-label="Blockquote"]` path is unused by the adapter — kept here only
+as a fallback reference if a future Dzen change ever stops accepting pasted blockquotes.
 
 ### Create-article flow (verified)
 `/profile/editor/create` (live session) redirects to the studio dashboard

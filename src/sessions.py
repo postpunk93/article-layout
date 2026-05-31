@@ -12,7 +12,7 @@ import os
 import subprocess
 from pathlib import Path
 
-from src import vc_adapter, pikabu_adapter, habr_adapter, smartlab_adapter
+from src import vc_adapter, pikabu_adapter, habr_adapter, smartlab_adapter, dzen_adapter
 
 PROFILES_ROOT = Path(".profiles")
 
@@ -132,6 +132,17 @@ PLATFORMS = {
         # element). Editor form only renders for an authenticated user.
         "editor_url": smartlab_adapter.ADD_URL,
         "alive_marker": smartlab_adapter.ALIVE_SEL,
+    },
+    "dzen": {
+        "build_document": dzen_adapter.build_document,
+        "editor_url": dzen_adapter.STUDIO_URL,
+        "alive_marker": dzen_adapter.ALIVE_SEL,
+        # Dzen attaches to a live Chrome over CDP (see adapter docstring); it does
+        # NOT use open_context. cli.py branches on this flag.
+        "cdp_attach": True,
+        "debug_port": dzen_adapter.DEBUG_PORT,
+        "manual_login": True,
+        "login_url": dzen_adapter.STUDIO_URL,
     },
 }
 

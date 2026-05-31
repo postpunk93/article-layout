@@ -72,6 +72,9 @@ def _set_clipboard(page, html):
 
 def _set_title_and_body(page, doc, log):
     log(f"Title: {doc.title!r}")
+    # Bring the tab to the foreground: over connect_over_cdp a real Ctrl+V only pastes
+    # the system clipboard into a focused tab (a background tab pastes empty).
+    page.bring_to_front()
     page.click(TITLE_SEL)
     page.keyboard.type(doc.title)
     # Move into the body and paste the whole structure with one real Ctrl+V.
@@ -99,7 +102,10 @@ def _replace_marker_with_image(page, block, path, log):
     block_loc = page.locator('[data-editor="ZenDraftEditor"][data-block="true"]').nth(idx)
     block_loc.scroll_into_view_if_needed()
     block_loc.click()
-    page.keyboard.press("Control+a")
+    # Empty ONLY this marker block. DraftJS treats Ctrl+A as "select the whole editor",
+    # so Ctrl+A + Delete would wipe the entire body — select just this line instead.
+    page.keyboard.press("Home")
+    page.keyboard.press("Shift+End")
     page.keyboard.press("Delete")
     # Reveal the side "+" by hovering the block's left gutter, then click it.
     # +10px puts the cursor just inside the left gutter where the "+" anchors.

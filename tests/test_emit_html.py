@@ -27,6 +27,19 @@ def test_html_special_chars_escaped():
     assert "a &lt; b &amp; c" in html
 
 
+def test_image_src_resolver_emits_real_img_tag():
+    doc = Document(title="T", blocks=[Image(file="image1.png", caption=None)])
+    html = emit_body(doc, image_src=lambda f: f"data:image/png;base64,XXX-{f}")
+    assert '<img src="data:image/png;base64,XXX-image1.png">' in html
+    assert "[[IMG" not in html
+
+
+def test_image_src_none_keeps_marker():
+    doc = Document(title="T", blocks=[Image(file="image1.png", caption=None)])
+    html = emit_body(doc)  # no resolver -> marker (VC/Pikabu behavior unchanged)
+    assert "[[IMG:image1.png]]" in html
+
+
 def test_caption_marker_emitted_and_escaped():
     doc = Document(
         title="T",

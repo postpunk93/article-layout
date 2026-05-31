@@ -16,7 +16,7 @@ def _runs_html(runs):
 
 
 def emit_body(doc, caption_marker=True, quote_as_paragraph=False, img_sep=":",
-              max_heading_level=None):
+              max_heading_level=None, image_src=None):
     """Render IR blocks to clean body HTML.
 
     Images are NOT emitted as <img>; they become a visible marker
@@ -60,8 +60,13 @@ def emit_body(doc, caption_marker=True, quote_as_paragraph=False, img_sep=":",
             tag = "p" if quote_as_paragraph else "blockquote"
             parts.append(f"<{tag}>{_runs_html(b.runs)}</{tag}>")
         elif isinstance(b, Image):
-            # file is a basename lookup key for the adapter; intentionally not escaped
-            parts.append(f"<p>[[IMG{img_sep}{b.file}]]</p>")
+            if image_src is not None:
+                # Emit a real <img> (e.g. a data-URI). Habr auto-uploads it to its
+                # CDN on paste, so no marker/replace pass is needed.
+                parts.append(f'<p><img src="{image_src(b.file)}"></p>')
+            else:
+                # file is a basename lookup key for the adapter; intentionally not escaped
+                parts.append(f"<p>[[IMG{img_sep}{b.file}]]</p>")
             if caption_marker and b.caption:
                 cap = "".join(r.text for r in b.caption)
                 parts.append(f"<p>[[CAP:{escape(cap)}]]</p>")

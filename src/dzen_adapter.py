@@ -57,5 +57,31 @@ def _open_editor(page, log):
     log(f"Article editor: {page.url}")
 
 
+def _set_clipboard(page, html):
+    page.evaluate(
+        """async (html) => {
+            const plain = html.replace(/<[^>]+>/g, '');
+            await navigator.clipboard.write([new ClipboardItem({
+                'text/html': new Blob([html], {type: 'text/html'}),
+                'text/plain': new Blob([plain], {type: 'text/plain'}),
+            })]);
+        }""",
+        html,
+    )
+
+
+def _set_title_and_body(page, doc, log):
+    log(f"Title: {doc.title!r}")
+    page.click(TITLE_SEL)
+    page.keyboard.type(doc.title)
+    # Move into the body and paste the whole structure with one real Ctrl+V.
+    html = body_html(doc)
+    _set_clipboard(page, html)
+    page.click(BODY_SEL)
+    page.keyboard.press("Control+V")
+    page.wait_for_timeout(1500)
+    log("Body pasted.")
+
+
 def build_document(page, doc, images_dir, log=print):
     raise NotImplementedError("dzen build_document is finalized in a later unit (browser methods)")

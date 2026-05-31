@@ -231,8 +231,15 @@ markers), and the **title is the first node of the editor** (no separate field).
 - **Title**: the FIRST node of the doc — `.tiptap .title` (an `<h1 class="title">`
   inside `div.title__wrapper[data-placeholder="Заголовок"]`). Click it and type the
   title; body paragraphs are the nodes after it (placeholder «Введите текст»).
-- **Per-block context menu** (`.context-menu.right-menu`, items `button.right-menu__item`):
-  «Параграф», **«Цитата»**, «Удалить» — this is how a paragraph becomes a native quote.
+- **Per-block context menu**: each block embeds a `.right-menu__container`; its items
+  are `button.right-menu__item` («Параграф», **«Цитата»**, «Удалить»). The menu is
+  `display:none` until hover, but a JS `.click()` on the «Цитата» button still fires
+  the conversion. Match the target paragraph by its content text (strip the
+  `.right-menu__container`/`.node__drag-control`/`.context-menu` text first).
+- **Image caption**: each image block has a `figcaption.node_figcaption` holding an
+  editable `<p data-placeholder="Подпись к изображению">`. A DOM range doesn't sync to
+  ProseMirror — `scrollIntoView`, compute the figcaption's on-screen point, fire a REAL
+  `page.mouse.click(x,y)`, then `keyboard.type` (the Pikabu caption lesson).
 - **Settings button (stop point)**: a `button` with text **«Далее к настройкам»**
   (class `btn ... tm-button_color-horizon`), disabled until the body has content.
 - **WYSIWYG/source toggle** exists (`button.switcher-control`, title «Выбор редактора») —
@@ -260,6 +267,13 @@ headings (h3+) are emitted as a bold line via `emit_body(..., max_heading_level=
 ### Stop point — advance to settings, never publish
 After the body is built, click «Далее к настройкам» and STOP on the article-settings
 screen (hubs / target audience / keywords are required there and left for the human).
+
+### Validated end-to-end
+`cli.py layout lists-quotes default habr` (72 IR blocks, 10 images, 1 quote, 2
+captioned images): title set, body laid out 1:1 (9 headings, both lists, bold/italic),
+all 10 images auto-uploaded to habrastorage, the quote converted to a native quote
+block, both captions written into their figcaption fields, then stopped on the
+settings screen. No marker/File-paste needed.
 
 ---
 

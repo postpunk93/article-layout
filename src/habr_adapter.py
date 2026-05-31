@@ -27,7 +27,7 @@ import time
 from pathlib import Path
 
 from src.emit_html import emit_body
-from src.ir import Image
+from src.ir import Image, Quote
 
 HOME_URL = "https://habr.com/ru/feed/"
 LOGIN_URL = "https://habr.com/ru/auth/login/"
@@ -88,6 +88,86 @@ def _wait_for_image_uploads(page, expected, log, timeout=120000):
         log(f"  image upload wait timed out ({str(e)[:80]})")
 
 
+# Each block carries a per-block menu; for a text block it offers «Цитата». Match the
+# paragraph by its content text (menu/drag text stripped), then JS-click «Цитата».
+_CONVERT_QUOTE_JS = r"""
+(text) => {
+  const pm = document.querySelector('.tiptap.ProseMirror');
+  const norm = s => (s || '').replace(/\s+/g, ' ').trim();
+  const target = norm(text);
+  for (const b of pm.querySelectorAll('.node_paragraph')) {
+    const clone = b.cloneNode(true);
+    clone.querySelectorAll('.right-menu__container,.node__drag-control,.context-menu')
+         .forEach(n => n.remove());
+    if (norm(clone.textContent) !== target) continue;
+    const btn = [...b.querySelectorAll('button.right-menu__item')]
+                  .find(x => norm(x.textContent) === 'Цитата');
+    if (btn) { btn.click(); return true; }
+  }
+  return false;
+}
+"""
+
+# Caption field = a <figcaption class="node_figcaption"> (placeholder «Подпись к
+# изображению») in the n-th image block. Return its on-screen point for a real click.
+_CAPTION_POINT_JS = r"""
+(n) => {
+  const pm = document.querySelector('.tiptap.ProseMirror');
+  const imgs = [...pm.querySelectorAll('img')];
+  const img = imgs[n];
+  if (!img) return null;
+  let block = img;
+  while (block.parentElement && block.parentElement !== pm) block = block.parentElement;
+  const cap = block.querySelector('figcaption.node_figcaption')
+           || block.querySelector('[data-placeholder="Подпись к изображению"]');
+  if (!cap) return null;
+  cap.scrollIntoView({block: 'center'});
+  let r = cap.getBoundingClientRect();
+  if (r.height < 4) {
+    const ir = img.getBoundingClientRect();
+    r = {x: ir.x, y: ir.bottom + 6, width: ir.width, height: 14};
+  }
+  return {x: r.x + Math.min(40, r.width / 2), y: r.y + r.height / 2};
+}
+"""
+
+
+def _convert_quotes(page, doc, log):
+    """Convert each pasted quote (which lands as a plain paragraph) to a native quote."""
+    quotes = [b for b in doc.blocks if isinstance(b, Quote)]
+    if not quotes:
+        return
+    log(f"Converting {len(quotes)} quote(s) to native blocks…")
+    for q in quotes:
+        text = "".join(r.text for r in q.runs)
+        try:
+            if not page.evaluate(_CONVERT_QUOTE_JS, text):
+                log(f"  quote not matched: {text[:40]!r}")
+        except Exception as e:  # noqa: BLE001 — best-effort per quote
+            log(f"  quote convert failed: {str(e)[:60]}")
+
+
+def _set_captions(page, doc, log):
+    """Type each image's caption into its native «Подпись к изображению» field."""
+    images = [b for b in doc.blocks if isinstance(b, Image)]
+    todo = [(i, b) for i, b in enumerate(images) if b.caption]
+    if not todo:
+        return
+    log(f"Setting {len(todo)} caption(s)…")
+    for idx, block in todo:
+        text = "".join(r.text for r in block.caption)
+        try:
+            point = page.evaluate(_CAPTION_POINT_JS, idx)
+            if not point:
+                log(f"  caption field not found for image #{idx}")
+                continue
+            page.mouse.click(point["x"], point["y"])
+            page.keyboard.type(text)
+            time.sleep(0.2)
+        except Exception as e:  # noqa: BLE001 — best-effort per caption
+            log(f"  caption set failed (#{idx}): {str(e)[:60]}")
+
+
 def build_document(page, doc, images_dir, log=print):
     images_dir = Path(images_dir)
 
@@ -119,8 +199,8 @@ def build_document(page, doc, images_dir, log=print):
     log(f"Waiting for {n_images} image upload(s) to habrastorage…")
     _wait_for_image_uploads(page, n_images, log)
 
-    # TODO (next passes): convert pasted quotes to native quote blocks; move image
-    # captions into each image's native caption field.
+    _convert_quotes(page, doc, log)
+    _set_captions(page, doc, log)
 
     log(f"Advancing to settings: «{SETTINGS_BUTTON_TEXT}»")
     try:

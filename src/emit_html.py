@@ -62,8 +62,9 @@ def emit_body(doc, caption_marker=True, quote_as_paragraph=False, img_sep=":",
         elif isinstance(b, Image):
             if image_src is not None:
                 # Emit a real <img> (e.g. a data-URI). Habr auto-uploads it to its
-                # CDN on paste, so no marker/replace pass is needed.
-                parts.append(f'<p><img src="{image_src(b.file)}"></p>')
+                # CDN on paste, so no marker/replace pass is needed. Escape the src
+                # for safety even though a data-URI carries no special chars.
+                parts.append(f'<p><img src="{escape(image_src(b.file), quote=True)}"></p>')
             else:
                 # file is a basename lookup key for the adapter; intentionally not escaped
                 parts.append(f"<p>[[IMG{img_sep}{b.file}]]</p>")

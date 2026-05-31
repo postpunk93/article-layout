@@ -3,7 +3,7 @@
 
   python cli.py login  <client> <platform>
   python cli.py status [client]
-  python cli.py layout <slug> <client> <platforms>   # platforms: vc,pikabu | all
+  python cli.py layout <slug> <client> <platforms>   # platforms: vc,pikabu,habr | all
 
 `login` is interactive (run it yourself: `! python cli.py login acme pikabu`).
 `layout` checks every requested session first; if any is dead it lays out
@@ -132,7 +132,7 @@ def main():
     p_layout = sub.add_parser("layout", help="lay out in/<slug> for a client on platforms")
     p_layout.add_argument("slug")
     p_layout.add_argument("client")
-    p_layout.add_argument("platforms", help="comma list (vc,pikabu) or 'all'")
+    p_layout.add_argument("platforms", help="comma list (vc,pikabu,habr) or 'all'")
     p_layout.set_defaults(func=cmd_layout)
 
     args = parser.parse_args()

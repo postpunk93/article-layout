@@ -32,7 +32,13 @@ _CHROME_CANDIDATES = [
 
 
 def chrome_executable() -> str | None:
-    """Path to the installed Chrome, or None if not found."""
+    """Path to the installed Chrome, or None if not found.
+
+    Used directly by manual_login (a subprocess needs an exe path). open_context
+    resolves Chrome independently via Playwright's channel="chrome"; this function
+    only gates that on/off. The two paths could in principle disagree if Chrome is
+    installed somewhere off the candidate list — unlikely for a standard install.
+    """
     for path in _CHROME_CANDIDATES:
         if str(path) and path.exists():
             return str(path)

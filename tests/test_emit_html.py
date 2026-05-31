@@ -134,6 +134,20 @@ def test_max_heading_level_default_keeps_h3():
     assert "<h3>Deep</h3>" in html
 
 
+def test_max_heading_level_boundary_keeps_cap_degrades_deeper():
+    doc = Document(
+        title="T",
+        blocks=[
+            Heading(level=3, runs=[Run("keep", False, False)]),
+            Heading(level=4, runs=[Run("drop", False, False)]),
+        ],
+    )
+    html = emit_body(doc, max_heading_level=3)  # h3 kept, h4 degraded
+    assert "<h3>keep</h3>" in html
+    assert "<h4>" not in html
+    assert "<p><strong>drop</strong></p>" in html
+
+
 def test_max_heading_level_preserves_inline_styles_in_degraded_heading():
     doc = Document(
         title="T",

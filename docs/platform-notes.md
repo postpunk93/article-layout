@@ -1,4 +1,4 @@
-# Platform notes (VC + Pikabu)
+# Platform notes (VC + Pikabu + Habr)
 
 Consolidated, durable findings from the platform-discovery experiments (the one-off
 probe scripts that produced these have been removed; their history is in git). This

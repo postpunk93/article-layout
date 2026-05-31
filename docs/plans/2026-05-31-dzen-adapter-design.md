@@ -1,0 +1,110 @@
+# Dzen adapter — design
+
+Status: **draft (discovery in progress)** — 2026-05-31, branch `feat/dzen-adapter`.
+
+Fifth platform adapter on the shared `parser → IR → adapter` architecture
+(after VC, Pikabu, Habr, Smartlab). Same shape: `build_document(page, doc,
+images_dir, log)` + module constants, registered in `src/sessions.py:PLATFORMS`.
+
+## Brainstorm decisions (locked)
+
+| Aspect | Decision |
+|---|---|
+| Surface | **Article editor** (not the short "post"). Post editor noted as a possible future feature. |
+| Editor entry | `https://dzen.ru/profile/editor/create` → "+" in navbar → "Написать статью" → article editor at `/profile/editor/id/<channel>/<doc>/edit`. |
+| Login | **Manual** (Yandex SmartCaptcha blanks under CDP). |
+| Stop point | **Autosaved draft** — build body + images, wait for autosave, stop. Cover/announce/publish stay manual. |
+| Body strategy | **Clipboard paste + quote-restore pass.** Manual paste carries everything EXCEPT quotes; quotes need a per-block conversion via the inline toolbar Blockquote button. |
+
+## Discovery findings (2026-05-31, live editor via CDP attach)
+
+### Auth — the Habr "login then reopen" scheme does NOT work for Dzen
+- Manual login → close Chrome → reopen profile under Playwright **fails**: lands on
+  `passport.yandex.ru/.../auth/add`. The master Yandex SSO cookie (`Session_id` on
+  `.yandex.ru`/`passport.yandex.ru`) is **session-scoped and dropped on Chrome close**;
+  only the persistent `.dzen.ru Session_id` survives, which is insufficient because
+  `/profile/editor/create` force-redirects through `oauth.yandex.ru/authorize`.
+- Confirmed not caused by the user's personal Chrome being open (tested with it fully closed).
+- **Working approach: never close the browser.** Launch a real Chrome (no automation
+  flags) with `--remote-debugging-port=9222`, user logs in, then Playwright
+  `connect_over_cdp("http://localhost:9222")` attaches to the SAME live process.
+  Session stays intact, anti-bot is satisfied (real Chrome, `navigator.webdriver`
+  not set under connect_over_cdp). This is the adapter's run mechanism for Dzen —
+  a departure from the other adapters' `open_context` (launch_persistent_context).
+
+### Editor internals
+- Editor is **Draft.js** (`public-DraftEditor-content`, custom `article-editor-desktop--*`
+  React CSS modules). Content lives in DraftJS's immutable ContentState; direct DOM
+  injection gets reconciled away → must go through paste + toolbar actions.
+- **Two contenteditables**: title (first `.public-DraftEditor-content`, `spellcheck="false"`)
+  and body (`div.public-DraftEditor-content[aria-describedby="placeholder-ZenDraftEditor"]`).
+
+### Stable selectors (CSS-module hashes like `-XK` avoided; aria/data/stable ids used)
+| Purpose | Selector |
+|---|---|
+| Body | `div.public-DraftEditor-content[aria-describedby="placeholder-ZenDraftEditor"]` |
+| Title | first `.public-DraftEditor-content` (`spellcheck="false"`) |
+| Inline toolbar (on selection) | `[aria-label="Heading 2"|"Heading 3"|"Blockquote"|"ul"|"ol"|"Bold"|"Italic"|"Strike"]` |
+| Quote conversion | `[aria-label="Blockquote"]` |
+| Image insert (side "+") | `[data-tip="Добавить изображение"]` |
+| Autosave status (stop marker / alive) | `[class*="editor-header__status"]` → text "Все изменения сохранены" |
+| Publish (do NOT click) | `[class*="editor-header__editBtn"]` |
+
+### Create-article flow (verified)
+`/profile/editor/create` (live session) redirects to the studio dashboard
+`/profile/editor/id/<channel>`. From there: click `[data-testid="add-publication-button"]`
+("+") → menu → "Написать статью" → lands in a fresh editor at
+`/profile/editor/id/<channel>/<doc>/edit` with the body ready.
+
+### Paste behaviour (verified — small representative snippet pasted live)
+A single real Ctrl+V of clean HTML from `emit_body` carries, as NATIVE Dzen blocks:
+- **Headings** `<h2>/<h3>` → real `<h2 class="zen-editor-block">` blocks ✅
+- **Paragraphs** ✅
+- **Bold/italic** → preserved as DraftJS inline styles (`font-weight:bold` / `font-style:italic`
+  spans, not `<strong>/<em>`) ✅ — **no strong/em restore pass needed**
+- **Quotes** → emit a semantic `<blockquote>` and Dzen makes a native
+  `<blockquote class="zen-editor-block zen-editor-block-quote">` ✅ — **no quote-conversion
+  pass needed.** (The user's "paste loses quotes" is a GDoc-clipboard artifact: GDoc emits
+  styled paragraphs, not `<blockquote>`. Our clean HTML emits real `<blockquote>`.)
+- **Lists** ul/ol → native `zen-editor-block-ul` with `<li class="zen-editor-block ...">` ✅
+- **Images** → a pasted `<img>` makes an image block, but a **data-URI ERRORS**
+  (`zen-editor-block-image__error`); Dzen does NOT ingest data-URIs (unlike Habr). So
+  images must be uploaded natively (below). Each image block has a native `<figcaption>`.
+
+**Conclusion:** Dzen body paste is the cleanest of all adapters — only IMAGES need a
+post-paste pass. No strong/em, no quote conversion.
+
+### Image upload (verified — uploaded to Dzen CDN)
+- Side "+" button (revealed by focusing an empty block and hovering its left gutter):
+  `button[class*="side-button__sideButton"]`, `data-tip="Добавить изображение"`.
+- Clicking it opens an image popup containing a hidden
+  `input[type=file]` (`class*="image-popup__file"`,
+  `accept="image/png,image/jpeg,image/bmp,image/webp,image/gif"`).
+- `set_input_files(<local path>)` on that input uploads to Dzen's CDN; the image block
+  flips to `err:false` with `src` on `https://avatars.dzeninfra.ru/get-zen_doc/...`.
+- Caption goes into the block's `<figcaption>`.
+- Adapter plan: emit images as marker paragraphs `[[IMG:file]]` (VC-style), then per
+  marker focus the block → reveal+click side "+" → `set_input_files` → wait for the
+  `avatars.dzeninfra.ru` src → type caption into figcaption.
+
+### Stop point / alive marker (verified)
+Autosave indicator `span[class*="editor-header__status"]` reads "Все изменения сохранены".
+Wait for that, then stop. Never click `[class*="editor-header__editBtn"]` (Опубликовать).
+
+## Final adapter shape
+- `src/dzen_adapter.py`: `EDITOR_URL`/studio nav, `ALIVE_SEL`, `build_document(page, doc, images_dir, log)`.
+- Registered in `PLATFORMS` with a Dzen-specific note: **does not use `open_context`** —
+  needs the live-Chrome + `connect_over_cdp` mechanism (see auth finding). `cli.py`/`sessions.py`
+  will need a small branch for the CDP-attach run mode (design the integration in the plan).
+- Body: `emit_body(doc, caption_marker=False, quote_as_paragraph=False, img_sep=":")`
+  (real `<blockquote>`; images as `[[IMG:file]]` markers; captions set natively).
+- Passes: (1) paste body; (2) per-image native upload + figcaption. That's it.
+
+## All discovery questions: RESOLVED ✅
+
+## Throwaway tooling
+`discovery_dzen.py` — modes: `login`/`inspect` (manual-login+reopen — proven NOT to work,
+bounces to passport), `serve` (launch live Chrome + debug port 9222), `attach`
+(connect_over_cdp + dump), `pastetest` (create article + paste snippet + structural dump).
+Delete after the adapter is built. NOTE: discovery created scratch drafts in the test
+channel — delete them by hand.

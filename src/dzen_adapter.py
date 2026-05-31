@@ -139,6 +139,10 @@ def _replace_marker_with_image(page, block, path, log):
         cap_loc = page.locator(CAPTION_SEL).last
         cap_loc.click()
         page.keyboard.type("".join(r.text for r in block.caption))
+    # NOTE: the image insert leaves the emptied marker as a blank paragraph after the
+    # figure. We deliberately DON'T auto-delete it: a Backspace on that block can remove
+    # the figure itself (DraftJS caret behavior), risking image loss — a cosmetic blank
+    # line is far cheaper than a dropped image. Remove blank lines by hand if desired.
     time.sleep(0.3)
 
 
@@ -162,14 +166,14 @@ def build_document(page, doc, images_dir, log=print):
             log(f"  image {block.file} failed ({str(e)[:80]}) — marker left in body")
 
     # Stop at the autosaved draft — NEVER click «Опубликовать». The paste and image
-    # uploads already dirty the editor, so autosave fires on its own; we just wait for
-    # the status to read the verified "Все изменения сохранены" (match the full phrase
-    # so a transient "Сохранение…" / "saving" state doesn't satisfy it early).
+    # uploads already dirty the editor, so autosave fires on its own; wait for the status
+    # to read a SAVED state ("Сохранено …" / "Все изменения сохранены") — the `[оы]` ending
+    # matches сохранен-о/сохранен-ы but NOT the in-progress "Сохранение…".
     try:
         page.wait_for_function(
             """(sel) => {
                 const s = document.querySelector(sel);
-                return s && /все изменения сохранен/i.test(s.innerText || '');
+                return s && /сохранен[оы]/i.test(s.innerText || '');
             }""",
             arg=STATUS_SEL,
             timeout=20000,

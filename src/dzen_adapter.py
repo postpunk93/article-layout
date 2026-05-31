@@ -48,7 +48,9 @@ def _open_editor(page, log):
     page.wait_for_selector(ADD_PUBLICATION_SEL, timeout=30000)  # logged-in marker
     page.locator(ADD_PUBLICATION_SEL).first.click()
     page.wait_for_timeout(800)
-    for item in ["text=Написать статью", "text=Статья"]:
+    # Primary is the exact menu label; the fallback is an EXACT "Статья" match
+    # (quoted) so it can't catch other publication types containing the word.
+    for item in ["text=Написать статью", 'text="Статья"']:
         loc = page.locator(item)
         if loc.count():
             loc.first.click()

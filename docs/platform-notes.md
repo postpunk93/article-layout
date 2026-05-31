@@ -1,4 +1,4 @@
-# Platform notes (VC + Pikabu)
+# Platform notes (VC + Pikabu + Habr)
 
 Consolidated, durable findings from the platform-discovery experiments (the one-off
 probe scripts that produced these have been removed; their history is in git). This
@@ -194,6 +194,86 @@ in long articles and captions come out empty.)
 Click «Сохранить черновик» → fires `POST …/save_draft_post` (200). The URL never changes;
 wait on that response as the success signal. The adapter stops at a saved draft (never
 publishes); empty tags/community are fine to SAVE (required only to PUBLISH).
+
+---
+
+## Habr — Tiptap / ProseMirror (custom, with auto image upload)
+
+Habr's article editor is **Tiptap / ProseMirror** — same family as Pikabu, so the
+body goes in as ONE high-fidelity HTML paste. Two things make Habr the easiest
+target so far: it **auto-uploads images pasted as `<img>`** (no File-paste, no
+markers), and the **title is the first node of the editor** (no separate field).
+
+> **Login vs automation use DIFFERENT browsers (load-bearing).** Habr's login is
+> behind **Yandex SmartCaptcha**, which detects the CDP/DevTools connection and
+> renders a BLANK captcha in any Playwright-driven browser (bundled Chromium AND
+> system Chrome alike — masking `navigator.webdriver` does NOT help). So:
+> - **Login** must use a **hand-launched system Chrome** (no CDP) on the profile
+>   dir → captcha renders → log in once; cookies persist in the profile.
+> - **Automation** then uses **Playwright `channel="chrome"` with an ABSOLUTE
+>   `user_data_dir`** on that same profile — it reuses the login (no captcha at
+>   build time) and drives the editor normally.
+> Bundled Chromium can NOT reuse the login (Chrome's app-bound cookie encryption is
+> unreadable by the older bundled build); system Chrome reading its own profile is
+> required. A RELATIVE `--user-data-dir` makes system Chrome fail to launch
+> (`TargetClosedError`) — always pass an absolute path.
+
+### Navigation & auth
+- **Editor entry = the navbar pencil**, not a fixed URL: `a:has(svg.tm-header-user-menu__icon_write)`
+  (svg class `tm-header-user-menu__icon_write`, title «Редактировать»). Clicking it
+  routes to the right editor for the account (sandbox → `https://habr.com/ru/sandbox/new/`;
+  a full account → its article editor). Prefer clicking the pencil over hardcoding.
+- Logged-out marker: `.tm-header-user-menu__login` («Войти») is present.
+- Auth persists in `.profiles/<client>/habr/` after the one-time hand-launched login.
+
+### Confirmed selectors / structure
+- **Body editor**: `.tiptap.ProseMirror` (one contenteditable holding the whole doc).
+- **Title**: the FIRST node of the doc — `.tiptap .title` (an `<h1 class="title">`
+  inside `div.title__wrapper[data-placeholder="Заголовок"]`). Click it and type the
+  title; body paragraphs are the nodes after it (placeholder «Введите текст»).
+- **Per-block context menu**: each block embeds a `.right-menu__container`; its items
+  are `button.right-menu__item` («Параграф», **«Цитата»**, «Удалить»). The menu is
+  `display:none` until hover, but a JS `.click()` on the «Цитата» button still fires
+  the conversion. Match the target paragraph by its content text (strip the
+  `.right-menu__container`/`.node__drag-control`/`.context-menu` text first).
+- **Image caption**: each image block has a `figcaption.node_figcaption` holding an
+  editable `<p data-placeholder="Подпись к изображению">`. A DOM range doesn't sync to
+  ProseMirror — `scrollIntoView`, compute the figcaption's on-screen point, fire a REAL
+  `page.mouse.click(x,y)`, then `keyboard.type` (the Pikabu caption lesson).
+- **Settings button (stop point)**: a `button` with text **«Далее к настройкам»**
+  (class `btn ... tm-button_color-horizon`), disabled until the body has content.
+- **WYSIWYG/source toggle** exists (`button.switcher-control`, title «Выбор редактора») —
+  we stay in WYSIWYG.
+- The inline formatting toolbar is a Tiptap bubble menu (appears on selection), so it
+  is not in the DOM at rest — paste carries the formatting, so it's rarely needed.
+
+### Body — ONE high-fidelity paste (Pikabu-style synthetic event)
+Dispatch a synthetic `paste` carrying `text/html` onto `.tiptap.ProseMirror` (same JS
+as Pikabu). Verified on a sample: `<h2>` headings (rendered as a `node_heading` block),
+`<strong>`/`<em>`, `<ul>` and `<ol>` all survive. **`<blockquote>` does NOT** — it
+lands as a plain paragraph and must be converted afterward (per-block menu → «Цитата»).
+
+### Images — paste `<img>`, Habr auto-uploads (no markers, no File-paste)
+Unlike VC (strips images) and Pikabu (needs a real `File`), Habr **fetches and
+re-hosts an image pasted as `<img src="data:…base64…">`**: after paste the `<img>`
+src becomes `https://habrastorage.org/getpro/habr/upload_files/…`. So emit REAL
+`<img>` with a base64 data-URI of each local file (no `[[IMG]]` markers) and **wait
+for the habrastorage `https` src** before continuing (upload is async).
+
+### Headings — single subheading level
+Habr supports one subheading level (h1 = article title, h2 = subheading). Deeper
+headings (h3+) are emitted as a bold line via `emit_body(..., max_heading_level=2)`.
+
+### Stop point — advance to settings, never publish
+After the body is built, click «Далее к настройкам» and STOP on the article-settings
+screen (hubs / target audience / keywords are required there and left for the human).
+
+### Validated end-to-end
+`cli.py layout lists-quotes default habr` (72 IR blocks, 10 images, 1 quote, 2
+captioned images): title set, body laid out 1:1 (9 headings, both lists, bold/italic),
+all 10 images auto-uploaded to habrastorage, the quote converted to a native quote
+block, both captions written into their figcaption fields, then stopped on the
+settings screen. No marker/File-paste needed.
 
 ---
 

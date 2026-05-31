@@ -8,11 +8,57 @@ in a `meta.json` beside the context. Liveness is never cached: `is_alive`
 probes the live site every time.
 """
 import json
+import os
+import subprocess
 from pathlib import Path
 
-from src import vc_adapter, pikabu_adapter
+from src import vc_adapter, pikabu_adapter, habr_adapter
 
 PROFILES_ROOT = Path(".profiles")
+
+# All adapters drive the user's INSTALLED Chrome (channel="chrome"), not bundled
+# Chromium: Habr's login is recognized only by the real Chrome reading its own
+# profile (bundled Chromium can't decrypt Chrome's app-bound cookies). The
+# automation switch is removed and navigator.webdriver masked as defense in depth.
+# NOTE: a relative user_data_dir makes system Chrome fail to launch — always pass
+# an absolute path (see open_context).
+_ANTI_AUTOMATION_ARGS = ["--start-maximized", "--disable-blink-features=AutomationControlled"]
+_MASK_WEBDRIVER = "Object.defineProperty(navigator,'webdriver',{get:()=>undefined});"
+_CHROME_CANDIDATES = [
+    Path(os.environ.get("PROGRAMFILES", r"C:\Program Files")) / "Google/Chrome/Application/chrome.exe",
+    Path(os.environ.get("PROGRAMFILES(X86)", r"C:\Program Files (x86)")) / "Google/Chrome/Application/chrome.exe",
+    Path(os.environ.get("LOCALAPPDATA", "")) / "Google/Chrome/Application/chrome.exe",
+]
+
+
+def chrome_executable() -> str | None:
+    """Path to the installed Chrome, or None if not found.
+
+    Used directly by manual_login (a subprocess needs an exe path). open_context
+    resolves Chrome independently via Playwright's channel="chrome"; this function
+    only gates that on/off. The two paths could in principle disagree if Chrome is
+    installed somewhere off the candidate list — unlikely for a standard install.
+    """
+    for path in _CHROME_CANDIDATES:
+        if str(path) and path.exists():
+            return str(path)
+    return None
+
+
+def manual_login(client: str, platform: str, url: str, root: Path = PROFILES_ROOT):
+    """Launch the user's Chrome by hand (NO CDP/automation) on the profile dir.
+
+    Habr's login captcha (Yandex SmartCaptcha) renders a blank box in any
+    CDP-driven browser, so a normal manual login must use a plain Chrome process.
+    Returns the Popen so the caller can terminate it after login. Raises if Chrome
+    isn't installed.
+    """
+    exe = chrome_executable()
+    if not exe:
+        raise RuntimeError("Chrome not found — install Chrome to log in to this platform.")
+    pdir = profile_dir(client, platform, root)
+    pdir.mkdir(parents=True, exist_ok=True)
+    return subprocess.Popen([exe, f"--user-data-dir={pdir.resolve()}", url])
 
 
 def profile_dir(client: str, platform: str, root: Path = PROFILES_ROOT) -> Path:
@@ -69,6 +115,17 @@ PLATFORMS = {
         # The Tiptap editor body only mounts for a logged-in user.
         "alive_marker": pikabu_adapter.BODY_SEL,
     },
+    "habr": {
+        "build_document": habr_adapter.build_document,
+        # is_alive navigates here and waits for ALIVE_SEL (the navbar pencil,
+        # present only when logged in).
+        "editor_url": habr_adapter.HOME_URL,
+        "alive_marker": habr_adapter.ALIVE_SEL,
+        # Login must use a non-CDP Chrome (captcha), so cmd_login launches Chrome
+        # by hand at this URL instead of the Playwright flow.
+        "manual_login": True,
+        "login_url": habr_adapter.LOGIN_URL,
+    },
 }
 
 
@@ -77,12 +134,25 @@ def known_platforms() -> list[str]:
 
 
 def open_context(p, client: str, platform: str, headless: bool, root: Path = PROFILES_ROOT):
-    """Launch a persistent Chromium context on this profile and return (ctx, page)."""
+    """Launch a persistent context on this profile and return (ctx, page).
+
+    Drives the installed Chrome (channel="chrome") with an ABSOLUTE user_data_dir,
+    the automation switch removed and navigator.webdriver masked. Falls back to
+    bundled Chromium only if Chrome isn't installed.
+    """
     pdir = profile_dir(client, platform, root)
     pdir.mkdir(parents=True, exist_ok=True)
-    ctx = p.chromium.launch_persistent_context(
-        str(pdir), headless=headless, args=["--start-maximized"], no_viewport=True
+    kwargs = dict(
+        user_data_dir=str(pdir.resolve()),
+        headless=headless,
+        args=_ANTI_AUTOMATION_ARGS,
+        no_viewport=True,
+        ignore_default_args=["--enable-automation"],
     )
+    if chrome_executable():
+        kwargs["channel"] = "chrome"
+    ctx = p.chromium.launch_persistent_context(**kwargs)
+    ctx.add_init_script(_MASK_WEBDRIVER)
     page = ctx.pages[0] if ctx.pages else ctx.new_page()
     return ctx, page
 

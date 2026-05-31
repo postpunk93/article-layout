@@ -3,7 +3,7 @@
 
   python cli.py login  <client> <platform>
   python cli.py status [client]
-  python cli.py layout <slug> <client> <platforms>   # platforms: vc,pikabu | all
+  python cli.py layout <slug> <client> <platforms>   # platforms: vc,pikabu,habr | all
 
 `login` is interactive (run it yourself: `! python cli.py login acme pikabu`).
 `layout` checks every requested session first; if any is dead it lays out
@@ -29,15 +29,26 @@ def cmd_login(args):
         print(f"Unknown platform {platform!r}; known: {', '.join(sessions.known_platforms())}")
         return 2
     entry = sessions.PLATFORMS[platform]
-    with sync_playwright() as p:
-        ctx, page = sessions.open_context(p, args.client, platform, headless=False)
-        page.goto(entry["editor_url"], wait_until="domcontentloaded")
-        print(f"Browser open for {args.client}/{platform}. Log in, then come back here.")
+    if entry.get("manual_login"):
+        # Login captcha blanks under CDP — launch a plain Chrome (no automation).
+        url = entry.get("login_url", entry["editor_url"])
+        proc = sessions.manual_login(args.client, platform, url)
+        print(f"Chrome open for {args.client}/{platform}. Log in, then come back here.")
         try:
             input("Press Enter once you're logged in to save the session...")
         except EOFError:
             time.sleep(120)
-        ctx.close()
+        proc.terminate()
+    else:
+        with sync_playwright() as p:
+            ctx, page = sessions.open_context(p, args.client, platform, headless=False)
+            page.goto(entry["editor_url"], wait_until="domcontentloaded")
+            print(f"Browser open for {args.client}/{platform}. Log in, then come back here.")
+            try:
+                input("Press Enter once you're logged in to save the session...")
+            except EOFError:
+                time.sleep(120)
+            ctx.close()
     sessions.write_meta(args.client, platform, {"last_login_at": _today()})
     print(f"Saved session for {args.client}/{platform}.")
     return 0
@@ -121,7 +132,7 @@ def main():
     p_layout = sub.add_parser("layout", help="lay out in/<slug> for a client on platforms")
     p_layout.add_argument("slug")
     p_layout.add_argument("client")
-    p_layout.add_argument("platforms", help="comma list (vc,pikabu) or 'all'")
+    p_layout.add_argument("platforms", help="comma list (vc,pikabu,habr) or 'all'")
     p_layout.set_defaults(func=cmd_layout)
 
     args = parser.parse_args()

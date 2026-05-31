@@ -8,11 +8,32 @@ in a `meta.json` beside the context. Liveness is never cached: `is_alive`
 probes the live site every time.
 """
 import json
+import os
 from pathlib import Path
 
-from src import vc_adapter, pikabu_adapter
+from src import vc_adapter, pikabu_adapter, habr_adapter
 
 PROFILES_ROOT = Path(".profiles")
+
+# Launch the user's INSTALLED Chrome (not bundled Chromium) with the automation
+# switch removed, so login captchas actually render. Bundled Chromium / the
+# --enable-automation switch make some captchas (e.g. Habr's Yandex SmartCaptcha)
+# show a blank box, which blocks a normal manual login.
+_ANTI_AUTOMATION_ARGS = ["--start-maximized", "--disable-blink-features=AutomationControlled"]
+_MASK_WEBDRIVER = "Object.defineProperty(navigator,'webdriver',{get:()=>undefined});"
+_CHROME_CANDIDATES = [
+    Path(os.environ.get("PROGRAMFILES", r"C:\Program Files")) / "Google/Chrome/Application/chrome.exe",
+    Path(os.environ.get("PROGRAMFILES(X86)", r"C:\Program Files (x86)")) / "Google/Chrome/Application/chrome.exe",
+    Path(os.environ.get("LOCALAPPDATA", "")) / "Google/Chrome/Application/chrome.exe",
+]
+
+
+def chrome_executable() -> str | None:
+    """Path to the installed Chrome, or None to fall back to bundled Chromium."""
+    for path in _CHROME_CANDIDATES:
+        if str(path) and path.exists():
+            return str(path)
+    return None
 
 
 def profile_dir(client: str, platform: str, root: Path = PROFILES_ROOT) -> Path:
@@ -69,6 +90,12 @@ PLATFORMS = {
         # The Tiptap editor body only mounts for a logged-in user.
         "alive_marker": pikabu_adapter.BODY_SEL,
     },
+    "habr": {
+        "build_document": habr_adapter.build_document,
+        "editor_url": habr_adapter.EDITOR_URL,
+        # Provisional marker (refined by the discovery probe, Task 2).
+        "alive_marker": habr_adapter.ALIVE_SEL,
+    },
 }
 
 
@@ -77,12 +104,25 @@ def known_platforms() -> list[str]:
 
 
 def open_context(p, client: str, platform: str, headless: bool, root: Path = PROFILES_ROOT):
-    """Launch a persistent Chromium context on this profile and return (ctx, page)."""
+    """Launch a persistent browser context on this profile and return (ctx, page).
+
+    Uses the installed Chrome with the automation switch removed (so login
+    captchas render); falls back to bundled Chromium if Chrome isn't found.
+    """
     pdir = profile_dir(client, platform, root)
     pdir.mkdir(parents=True, exist_ok=True)
-    ctx = p.chromium.launch_persistent_context(
-        str(pdir), headless=headless, args=["--start-maximized"], no_viewport=True
+    kwargs = dict(
+        user_data_dir=str(pdir),
+        headless=headless,
+        args=_ANTI_AUTOMATION_ARGS,
+        no_viewport=True,
+        ignore_default_args=["--enable-automation"],
     )
+    exe = chrome_executable()
+    if exe:
+        kwargs["executable_path"] = exe
+    ctx = p.chromium.launch_persistent_context(**kwargs)
+    ctx.add_init_script(_MASK_WEBDRIVER)
     page = ctx.pages[0] if ctx.pages else ctx.new_page()
     return ctx, page
 

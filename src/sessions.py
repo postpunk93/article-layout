@@ -12,7 +12,7 @@ import os
 import subprocess
 from pathlib import Path
 
-from src import vc_adapter, pikabu_adapter, habr_adapter
+from src import vc_adapter, pikabu_adapter, habr_adapter, smartlab_adapter
 
 PROFILES_ROOT = Path(".profiles")
 
@@ -125,6 +125,13 @@ PLATFORMS = {
         # by hand at this URL instead of the Playwright flow.
         "manual_login": True,
         "login_url": habr_adapter.LOGIN_URL,
+    },
+    "smartlab": {
+        "build_document": smartlab_adapter.build_document,
+        # is_alive navigates here and waits for ALIVE_SEL (a logged-in-only
+        # element). Editor form only renders for an authenticated user.
+        "editor_url": smartlab_adapter.ADD_URL,
+        "alive_marker": smartlab_adapter.ALIVE_SEL,
     },
 }
 

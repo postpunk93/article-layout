@@ -6,8 +6,6 @@ Habr "login then reopen profile" scheme bounces to passport). One real clipboard
 paste carries headings/paragraphs/bold/italic/quotes/lists natively; only images
 need a native-upload pass; stop at autosave, never publish.
 """
-from pathlib import Path
-
 from src.emit_html import emit_body
 
 # Studio dashboard; /profile/editor/create redirects here when logged in.
@@ -33,4 +31,4 @@ def body_html(doc):
 
 
 def build_document(page, doc, images_dir, log=print):
-    raise NotImplementedError  # filled in by later tasks
+    raise NotImplementedError("dzen build_document is finalized in a later unit (browser methods)")

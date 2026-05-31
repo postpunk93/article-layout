@@ -45,6 +45,23 @@ def chrome_executable() -> str | None:
     return None
 
 
+def _launch_chrome(client: str, platform: str, url: str, root: Path,
+                   extra_args: list[str] = ()):
+    """Popen the user's installed Chrome on the profile dir, opening `url`.
+
+    Shared by manual_login (plain Chrome) and launch_debug_chrome (adds a
+    remote-debugging port via extra_args). Always passes an ABSOLUTE user_data_dir
+    (a relative one makes system Chrome fail to launch). Raises if Chrome isn't
+    installed.
+    """
+    exe = chrome_executable()
+    if not exe:
+        raise RuntimeError("Chrome not found — install Chrome to log in to this platform.")
+    pdir = profile_dir(client, platform, root)
+    pdir.mkdir(parents=True, exist_ok=True)
+    return subprocess.Popen([exe, *extra_args, f"--user-data-dir={pdir.resolve()}", url])
+
+
 def manual_login(client: str, platform: str, url: str, root: Path = PROFILES_ROOT):
     """Launch the user's Chrome by hand (NO CDP/automation) on the profile dir.
 
@@ -53,15 +70,11 @@ def manual_login(client: str, platform: str, url: str, root: Path = PROFILES_ROO
     Returns the Popen so the caller can terminate it after login. Raises if Chrome
     isn't installed.
     """
-    exe = chrome_executable()
-    if not exe:
-        raise RuntimeError("Chrome not found — install Chrome to log in to this platform.")
-    pdir = profile_dir(client, platform, root)
-    pdir.mkdir(parents=True, exist_ok=True)
-    return subprocess.Popen([exe, f"--user-data-dir={pdir.resolve()}", url])
+    return _launch_chrome(client, platform, url, root)
 
 
 def cdp_endpoint(port: int) -> str:
+    """CDP HTTP endpoint that Playwright's connect_over_cdp attaches to."""
     return f"http://localhost:{port}"
 
 
@@ -71,17 +84,8 @@ def launch_debug_chrome(client: str, platform: str, url: str, port: int,
     NO automation flags. Yandex anti-bot rejects CDP-automation-launched Chrome but
     accepts this; Playwright then connect_over_cdp's to it. Returns the Popen — the
     caller MUST keep it alive for the whole layout run (closing drops the session)."""
-    exe = chrome_executable()
-    if not exe:
-        raise RuntimeError("Chrome not found — install Chrome to use Dzen.")
-    pdir = profile_dir(client, platform, root)
-    pdir.mkdir(parents=True, exist_ok=True)
-    return subprocess.Popen([
-        exe,
-        f"--remote-debugging-port={port}",
-        f"--user-data-dir={pdir.resolve()}",
-        url,
-    ])
+    return _launch_chrome(client, platform, url, root,
+                          extra_args=[f"--remote-debugging-port={port}"])
 
 
 def profile_dir(client: str, platform: str, root: Path = PROFILES_ROOT) -> Path:

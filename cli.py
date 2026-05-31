@@ -62,7 +62,13 @@ def cmd_status(args):
     print(f"{'client':<16}{'platform':<10}{'state':<8}label")
     for client in clients:
         for platform in sessions.list_accounts(client):
-            state = "alive" if sessions.is_alive(client, platform) else "DEAD"
+            # cdp_attach platforms (Dzen) have no standalone session to probe — is_alive
+            # would launch a CDP-automation Chrome that Yandex anti-bot rejects (always
+            # DEAD) and waste a browser per status call. Report them as live-attach.
+            if sessions.PLATFORMS.get(platform, {}).get("cdp_attach"):
+                state = "attach"
+            else:
+                state = "alive" if sessions.is_alive(client, platform) else "DEAD"
             label = sessions.read_meta(client, platform).get("label", "")
             print(f"{client:<16}{platform:<10}{state:<8}{label}")
     return 0
@@ -123,7 +129,7 @@ def cmd_layout(args):
                     try:
                         input("Press Enter once you are logged in to Dzen and ready to lay out...")
                     except EOFError:
-                        time.sleep(5)
+                        time.sleep(120)  # non-interactive: give a human time to log in
                     try:
                         entry["build_document"](page, doc, images_dir)
                         print(f"Done — {platform} draft built. Review and publish manually.")

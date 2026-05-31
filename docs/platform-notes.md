@@ -1,4 +1,4 @@
-# Platform notes (VC + Pikabu + Habr)
+# Platform notes (VC + Pikabu + Habr + Smartlab)
 
 Consolidated, durable findings from the platform-discovery experiments (the one-off
 probe scripts that produced these have been removed; their history is in git). This
@@ -274,6 +274,69 @@ captioned images): title set, body laid out 1:1 (9 headings, both lists, bold/it
 all 10 images auto-uploaded to habrastorage, the quote converted to a native quote
 block, both captions written into their figcaption fields, then stopped on the
 settings screen. No marker/File-paste needed.
+
+---
+
+## Smartlab — TinyMCE 3.5.11 (legacy, custom `lseditor` plugin)
+
+smart-lab.ru's post editor is a **legacy TinyMCE 3.5.11** instance (an iframe-based
+WYSIWYG, NOT a modern contenteditable framework). Plugins:
+`lseditor,syntaxhl,safari,inlinepopups,media,pagebreak,paste,mention`. The body goes
+in via the **TinyMCE JS API** (`tinymce.get('topic_text').setContent(html)`), which
+renders our emitted HTML natively — no flaky paste, no clipboard. Images are the one
+exception: they go through a per-image **custom upload dialog**, not `setContent`.
+
+### Navigation & auth
+- New-post form: `https://smart-lab.ru/topic/add/` (`<form id="editor_form">`, POST).
+- Auth is an **ordinary login/password** — the STANDARD Playwright login flow works
+  (no captcha under CDP, unlike Habr): `python cli.py login <client> smartlab`.
+- The form only renders for a logged-in user, so the title input doubles as the
+  liveness marker.
+
+### Confirmed selectors / structure
+- **Title**: `input#topic_title` (also `ALIVE_SEL`).
+- **Tags**: `input#topic_tags` (out of scope for v1).
+- **Body**: `textarea#topic_text` (display:none, TinyMCE-managed) + the editor iframe
+  **`#topic_text_ifr`** (wait on the iframe, not the hidden textarea). TinyMCE editor
+  id == `topic_text` → `tinymce.get('topic_text')`.
+- **Toolbar capabilities** (native): heading dropdown «Заголовок», Полужирный/Курсив/
+  Подчёркнутый/Зачёркнутый, Маркированный/Нумерованный список, **«Цитата» (native
+  `<blockquote>`)**, «Вставить изображение», «Редактировать HTML код» (source mode —
+  confirms the editor accepts raw HTML).
+- **Submit buttons** (`#editor_form`): `input[name=submit_preview]` value «предпросмотр»
+  (AJAX preview → `#text_preview`, **safe stop, does NOT publish**) and
+  `input[name=submit_topic_publish]` value «опубликовать» (**PUBLISH — never click**).
+  There is **no separate "save draft"** button → the stop point is «предпросмотр».
+
+### Body — `setContent` of emitted HTML (deterministic, native)
+`emit_body(doc, caption_marker=False)` → `tinymce.get('topic_text').setContent(html)`.
+TinyMCE renders `<strong>/<em>/<ul>/<ol>/<li>/<blockquote>/<hN>/<p>` as native nodes.
+Call `ed.save()` (TinyMCE 3 syncs iframe → textarea) before submitting so the preview
+sees the content. (Heading levels smart-lab keeps on server submit are still to be
+confirmed at e2e; `setContent` itself accepts any `<hN>`.)
+
+### Images — per-image custom dialog (`lseditor/image.htm`), NOT setContent
+Clicking the toolbar **«Вставить изображение»** (`a[title="Вставить изображение"]`)
+opens an `inlinepopups` modal whose body is an iframe loading
+`…/plugins/lseditor/image.htm` (frame name `mce_inlinepopups_<N>_ifr`). Inside that
+iframe:
+- `input#img_file` (file) — **upload a local file** (limit 3000×3000 px, 16 MB);
+  `input#img_url` (default `http://`) — alternative insert-by-URL (we have local
+  files, so use `#img_file`).
+- radios `preview_size` = `small` (60×60) / `medium` (250×250) / `large` (550×550) —
+  the inserted thumbnail size. (For articles, prefer `large`.)
+- `select#align` = нет/лево/право.
+- **`input#title` = «Описание»** — the image's caption/alt (native caption field).
+- `input#insert` value «Вставить» — uploads (the dialog shows «Загрузка») and inserts
+  the `<img>` into the editor at the caret; `input#cancel` = «Отмена».
+Because images insert at the caret, ordering requires anchoring: `setContent` the body
+with a unique placeholder per image, then for each image set the TinyMCE selection to
+its placeholder, run the dialog (file → size → caption → «Вставить»), and clean up the
+placeholder. (Exact upload-complete signal + inserted markup to be nailed down at e2e.)
+
+### Stop point — «предпросмотр», never «опубликовать»
+After body + images, click `input[name=submit_preview]` and STOP (AJAX preview renders
+in `#text_preview`; nothing is published). `submit_topic_publish` is never clicked.
 
 ---
 

@@ -83,5 +83,51 @@ def _set_title_and_body(page, doc, log):
     log("Body pasted.")
 
 
+def _replace_marker_with_image(page, block, path, log):
+    needle = f"[[IMG:{block.file}]]"
+    # Find and focus the marker block, then clear its text so the upload lands in place.
+    idx = page.evaluate(
+        """(needle) => {
+            const bs = [...document.querySelectorAll('[data-editor="ZenDraftEditor"][data-block="true"]')];
+            return bs.findIndex(el => (el.innerText || '').includes(needle));
+        }""",
+        needle,
+    )
+    if idx < 0:
+        log(f"  marker {needle} not found — skipping")
+        return
+    block_loc = page.locator('[data-editor="ZenDraftEditor"][data-block="true"]').nth(idx)
+    block_loc.scroll_into_view_if_needed()
+    block_loc.click()
+    page.keyboard.press("Control+a")
+    page.keyboard.press("Delete")
+    # Reveal the side "+" by hovering the block's left gutter, then click it.
+    box = block_loc.bounding_box()
+    page.mouse.move(box["x"] + 10, box["y"] + box["height"] / 2)
+    page.wait_for_selector(SIDE_BUTTON_SEL, timeout=4000)
+    n_before = page.evaluate("() => document.querySelectorAll('figure.zen-editor-block-image img').length")
+    page.locator(SIDE_BUTTON_SEL).first.click()
+    # The side button opens an image popup carrying a hidden file input.
+    page.wait_for_selector(IMAGE_FILE_INPUT_SEL, timeout=8000)
+    page.locator(IMAGE_FILE_INPUT_SEL).first.set_input_files(str(path))
+    # Wait for the uploaded image to get a real CDN src (avatars.dzeninfra.ru).
+    page.wait_for_function(
+        """(n) => {
+            const imgs = document.querySelectorAll('figure.zen-editor-block-image img');
+            if (imgs.length <= n) return false;
+            const last = imgs[imgs.length - 1];
+            return last.complete && last.naturalWidth > 0 && /^https?:/.test(last.currentSrc || last.src || '');
+        }""",
+        arg=n_before,
+        timeout=60000,
+    )
+    log(f"  image: {block.file} caption={'yes' if block.caption else 'no'}")
+    if block.caption:
+        cap_loc = page.locator(FIGCAPTION_SEL).last
+        cap_loc.click()
+        page.keyboard.type("".join(r.text for r in block.caption))
+    time.sleep(0.3)
+
+
 def build_document(page, doc, images_dir, log=print):
     raise NotImplementedError("dzen build_document is finalized in a later unit (browser methods)")

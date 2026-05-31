@@ -61,6 +61,29 @@ def manual_login(client: str, platform: str, url: str, root: Path = PROFILES_ROO
     return subprocess.Popen([exe, f"--user-data-dir={pdir.resolve()}", url])
 
 
+def cdp_endpoint(port: int) -> str:
+    return f"http://localhost:{port}"
+
+
+def launch_debug_chrome(client: str, platform: str, url: str, port: int,
+                        root: Path = PROFILES_ROOT):
+    """Launch the user's real Chrome on the profile with a remote-debugging port and
+    NO automation flags. Yandex anti-bot rejects CDP-automation-launched Chrome but
+    accepts this; Playwright then connect_over_cdp's to it. Returns the Popen — the
+    caller MUST keep it alive for the whole layout run (closing drops the session)."""
+    exe = chrome_executable()
+    if not exe:
+        raise RuntimeError("Chrome not found — install Chrome to use Dzen.")
+    pdir = profile_dir(client, platform, root)
+    pdir.mkdir(parents=True, exist_ok=True)
+    return subprocess.Popen([
+        exe,
+        f"--remote-debugging-port={port}",
+        f"--user-data-dir={pdir.resolve()}",
+        url,
+    ])
+
+
 def profile_dir(client: str, platform: str, root: Path = PROFILES_ROOT) -> Path:
     return Path(root) / client / platform
 

@@ -130,4 +130,34 @@ def _replace_marker_with_image(page, block, path, log):
 
 
 def build_document(page, doc, images_dir, log=print):
-    raise NotImplementedError("dzen build_document is finalized in a later unit (browser methods)")
+    images_dir = Path(images_dir)
+    page.context.grant_permissions(["clipboard-read", "clipboard-write"])
+
+    _open_editor(page, log)
+    _set_title_and_body(page, doc, log)
+
+    images = [b for b in doc.blocks if isinstance(b, Image)]
+    log(f"Uploading {len(images)} image(s)…")
+    for block in images:
+        path = images_dir / block.file
+        if not path.exists():
+            log(f"  IMAGE MISSING ON DISK: {path} — leaving marker [[IMG:{block.file}]]")
+            continue
+        try:
+            _replace_marker_with_image(page, block, path, log)
+        except Exception as e:  # noqa: BLE001 — report and continue
+            log(f"  image {block.file} failed ({str(e)[:80]}) — marker left in body")
+
+    # Stop at the autosaved draft — NEVER click «Опубликовать».
+    try:
+        page.wait_for_function(
+            """(sel) => {
+                const s = document.querySelector(sel);
+                return s && /сохранен/i.test(s.innerText || '');
+            }""",
+            arg=STATUS_SEL,
+            timeout=20000,
+        )
+        log("Draft autosaved.")
+    except Exception:  # noqa: BLE001
+        log(f"WARNING: did not observe autosave status; draft may still be saving. URL: {page.url}")

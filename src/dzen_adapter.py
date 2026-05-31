@@ -21,8 +21,8 @@ BODY_SEL = '.public-DraftEditor-content[spellcheck="true"]'      # body contente
 TITLE_SEL = '.public-DraftEditor-content[spellcheck="false"]'    # title contenteditable
 STATUS_SEL = '[class*="editor-header__status"]'                  # autosave indicator
 SIDE_BUTTON_SEL = '[class*="side-button__sideButton"]'           # reveal-on-hover image "+"
-IMAGE_FILE_INPUT_SEL = 'input[type=file][class*="image-popup__file"]'
-FIGCAPTION_SEL = 'figure.zen-editor-block-image figcaption'
+UPLOAD_BTN_TEXT = "Загрузите файл"                               # in the image popup; fires a file chooser
+CAPTION_SEL = 'textarea[class*="image-caption__input"]'         # uploaded image's caption field
 # Logged-in marker: the studio "+" only renders for an authenticated user.
 ALIVE_SEL = ADD_PUBLICATION_SEL
 
@@ -117,9 +117,12 @@ def _replace_marker_with_image(page, block, path, log):
     page.wait_for_selector(SIDE_BUTTON_SEL, timeout=4000)
     n_before = page.evaluate("() => document.querySelectorAll('figure.zen-editor-block-image img').length")
     page.locator(SIDE_BUTTON_SEL).first.click()
-    # The side button opens an image popup carrying a hidden file input.
-    page.wait_for_selector(IMAGE_FILE_INPUT_SEL, timeout=8000)
-    page.locator(IMAGE_FILE_INPUT_SEL).first.set_input_files(str(path))
+    # The side button opens an image popup whose "Загрузите файл" button fires a native
+    # file chooser. The popup's own <input type=file> is display:none, so a
+    # visibility-waiting set_input_files would hang — intercept the chooser instead.
+    with page.expect_file_chooser(timeout=10000) as fc:
+        page.get_by_text(UPLOAD_BTN_TEXT).first.click()
+    fc.value.set_files(str(path))
     # Wait for the uploaded image to get a real CDN src (avatars.dzeninfra.ru).
     page.wait_for_function(
         """(n) => {
@@ -133,7 +136,7 @@ def _replace_marker_with_image(page, block, path, log):
     )
     log(f"  image: {block.file} caption={'yes' if block.caption else 'no'}")
     if block.caption:
-        cap_loc = page.locator(FIGCAPTION_SEL).last
+        cap_loc = page.locator(CAPTION_SEL).last
         cap_loc.click()
         page.keyboard.type("".join(r.text for r in block.caption))
     time.sleep(0.3)

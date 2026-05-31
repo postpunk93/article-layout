@@ -6,7 +6,11 @@ Habr "login then reopen profile" scheme bounces to passport). One real clipboard
 paste carries headings/paragraphs/bold/italic/quotes/lists natively; only images
 need a native-upload pass; stop at autosave, never publish.
 """
+import time
+from pathlib import Path
+
 from src.emit_html import emit_body
+from src.ir import Image
 
 # Studio dashboard; /profile/editor/create redirects here when logged in.
 STUDIO_URL = "https://dzen.ru/profile/editor/create"
@@ -28,6 +32,29 @@ def body_html(doc):
     block), images as [[IMG:file]] markers (data-URIs error in Dzen), captions set
     natively (no marker)."""
     return emit_body(doc, caption_marker=False, quote_as_paragraph=False, img_sep=":")
+
+
+def _open_editor(page, log):
+    """From a logged-in live session, open a fresh article editor and return when the
+    body contenteditable is present."""
+    if "/edit" in page.url:
+        try:
+            page.wait_for_selector(BODY_SEL, timeout=4000)
+            return
+        except Exception:  # noqa: BLE001
+            pass
+    log("Opening Dzen studio…")
+    page.goto(STUDIO_URL, wait_until="domcontentloaded")
+    page.wait_for_selector(ADD_PUBLICATION_SEL, timeout=30000)  # logged-in marker
+    page.locator(ADD_PUBLICATION_SEL).first.click()
+    page.wait_for_timeout(800)
+    for item in ["text=Написать статью", "text=Статья"]:
+        loc = page.locator(item)
+        if loc.count():
+            loc.first.click()
+            break
+    page.wait_for_selector(BODY_SEL, timeout=20000)
+    log(f"Article editor: {page.url}")
 
 
 def build_document(page, doc, images_dir, log=print):

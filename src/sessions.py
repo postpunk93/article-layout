@@ -45,47 +45,22 @@ def chrome_executable() -> str | None:
     return None
 
 
-def _launch_chrome(client: str, platform: str, url: str, root: Path,
-                   extra_args: list[str] = ()):
-    """Popen the user's installed Chrome on the profile dir, opening `url`.
+def manual_login(client: str, platform: str, url: str, root: Path = PROFILES_ROOT):
+    """Launch the user's Chrome by hand (NO CDP/automation) on the profile dir.
 
-    Shared by manual_login (plain Chrome) and launch_debug_chrome (adds a
-    remote-debugging port via extra_args). Always passes an ABSOLUTE user_data_dir
-    (a relative one makes system Chrome fail to launch). Raises if Chrome isn't
-    installed.
+    Habr's and Dzen's login captcha (Yandex SmartCaptcha) renders a blank box in any
+    CDP-driven browser, so a normal manual login must use a plain Chrome process. Once
+    logged in, layout/is_alive reuse the profile via the standard open_context. Returns
+    the Popen so the caller can terminate it after login; passes an ABSOLUTE
+    user_data_dir (a relative one makes system Chrome fail to launch). Raises if Chrome
+    isn't installed.
     """
     exe = chrome_executable()
     if not exe:
         raise RuntimeError("Chrome not found — install Chrome to log in to this platform.")
     pdir = profile_dir(client, platform, root)
     pdir.mkdir(parents=True, exist_ok=True)
-    return subprocess.Popen([exe, *extra_args, f"--user-data-dir={pdir.resolve()}", url])
-
-
-def manual_login(client: str, platform: str, url: str, root: Path = PROFILES_ROOT):
-    """Launch the user's Chrome by hand (NO CDP/automation) on the profile dir.
-
-    Habr's login captcha (Yandex SmartCaptcha) renders a blank box in any
-    CDP-driven browser, so a normal manual login must use a plain Chrome process.
-    Returns the Popen so the caller can terminate it after login. Raises if Chrome
-    isn't installed.
-    """
-    return _launch_chrome(client, platform, url, root)
-
-
-def cdp_endpoint(port: int) -> str:
-    """CDP HTTP endpoint that Playwright's connect_over_cdp attaches to."""
-    return f"http://localhost:{port}"
-
-
-def launch_debug_chrome(client: str, platform: str, url: str, port: int,
-                        root: Path = PROFILES_ROOT):
-    """Launch the user's real Chrome on the profile with a remote-debugging port and
-    NO automation flags. Yandex anti-bot rejects CDP-automation-launched Chrome but
-    accepts this; Playwright then connect_over_cdp's to it. Returns the Popen — the
-    caller MUST keep it alive for the whole layout run (closing drops the session)."""
-    return _launch_chrome(client, platform, url, root,
-                          extra_args=[f"--remote-debugging-port={port}"])
+    return subprocess.Popen([exe, f"--user-data-dir={pdir.resolve()}", url])
 
 
 def profile_dir(client: str, platform: str, root: Path = PROFILES_ROOT) -> Path:
@@ -162,12 +137,12 @@ PLATFORMS = {
     },
     "dzen": {
         "build_document": dzen_adapter.build_document,
+        # is_alive navigates here and waits for ALIVE_SEL (the studio "+", present only
+        # when logged in). Editor opens from the studio for an authenticated user.
         "editor_url": dzen_adapter.STUDIO_URL,
         "alive_marker": dzen_adapter.ALIVE_SEL,
-        # Dzen attaches to a live Chrome over CDP (see adapter docstring); it does
-        # NOT use open_context. cli.py branches on this flag.
-        "cdp_attach": True,
-        "debug_port": dzen_adapter.DEBUG_PORT,
+        # Login needs a non-CDP Chrome (Yandex SmartCaptcha), like Habr; afterwards
+        # layout/is_alive reuse the profile via the standard open_context.
         "manual_login": True,
         "login_url": dzen_adapter.STUDIO_URL,
     },

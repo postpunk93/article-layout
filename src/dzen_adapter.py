@@ -139,11 +139,42 @@ def _replace_marker_with_image(page, block, path, log):
         cap_loc = page.locator(CAPTION_SEL).last
         cap_loc.click()
         page.keyboard.type("".join(r.text for r in block.caption))
-    # NOTE: the image insert leaves the emptied marker as a blank paragraph after the
-    # figure. We deliberately DON'T auto-delete it: a Backspace on that block can remove
-    # the figure itself (DraftJS caret behavior), risking image loss — a cosmetic blank
-    # line is far cheaper than a dropped image. Remove blank lines by hand if desired.
     time.sleep(0.3)
+
+
+def _strip_blank_after_images(page, log):
+    """Remove the blank paragraph each image insert leaves after its figure (the
+    emptied marker block). For each figure→blank→non-image triple, click the blank and
+    forward-Delete to merge the NEXT block UP into it. Forward-Delete works AWAY from
+    the atomic image above — a Backspace would merge INTO the image and DELETE it (image
+    loss). The non-image guard on the following block means we never merge a figure."""
+    sel = "[data-editor=ZenDraftEditor][data-block=true]"
+    removed = 0
+    for _ in range(40):  # one pass removes one blank; guard against a stuck scan
+        idx = page.evaluate(
+            """(sel) => {
+                const bs = [...document.querySelectorAll(sel)];
+                for (let i = 0; i < bs.length - 2; i++) {
+                    if (/zen-editor-block-image/.test(bs[i].className) &&
+                        !/zen-editor-block-image/.test(bs[i + 1].className) &&
+                        (bs[i + 1].innerText || '').trim() === '' &&
+                        !/zen-editor-block-image/.test(bs[i + 2].className)) return i + 1;
+                }
+                return -1;
+            }""",
+            sel,
+        )
+        if idx < 0:
+            break
+        blk = page.locator(sel).nth(idx)
+        blk.scroll_into_view_if_needed()
+        blk.click()
+        page.keyboard.press("End")
+        page.keyboard.press("Delete")
+        page.wait_for_timeout(150)
+        removed += 1
+    if removed:
+        log(f"Removed {removed} blank line(s) after images.")
 
 
 def build_document(page, doc, images_dir, log=print):
@@ -164,6 +195,8 @@ def build_document(page, doc, images_dir, log=print):
             _replace_marker_with_image(page, block, path, log)
         except Exception as e:  # noqa: BLE001 — report and continue
             log(f"  image {block.file} failed ({str(e)[:80]}) — marker left in body")
+
+    _strip_blank_after_images(page, log)
 
     # Stop at the autosaved draft — NEVER click «Опубликовать». The paste and image
     # uploads already dirty the editor, so autosave fires on its own; wait for the status

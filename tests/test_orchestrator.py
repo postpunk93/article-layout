@@ -34,3 +34,59 @@ def test_precheck_one_dead_blocks_everything():
     ok, dead = orchestrator.precheck("acme", ["vc", "pikabu"], alive)
     assert ok is False
     assert dead == [("acme", "pikabu")]
+
+
+class _FakePage:
+    def __init__(self, closed):
+        self.closed = closed
+
+    def is_closed(self):
+        return self.closed
+
+
+class _FakeCtx:
+    def __init__(self, pages):
+        self.pages = pages
+
+
+def test_wait_returns_immediately_when_all_closed():
+    ctx = _FakeCtx([_FakePage(closed=True)])
+    pumped = []
+    orchestrator.wait_until_all_closed([("vc", ctx)], pump=lambda pg: pumped.append(pg))
+    assert pumped == []  # nothing live, so never pumped
+
+
+def test_wait_blocks_until_user_closes_window():
+    page = _FakePage(closed=False)
+    ctx = _FakeCtx([page])
+    calls = {"n": 0}
+
+    def pump(_pg):
+        calls["n"] += 1
+        page.closed = True  # user closes the window during the wait
+
+    orchestrator.wait_until_all_closed([("vc", ctx)], pump=pump)
+    assert calls["n"] == 1
+
+
+def test_wait_survives_pump_exception():
+    page = _FakePage(closed=False)
+    ctx = _FakeCtx([page])
+    state = {"first": True}
+
+    def pump(_pg):
+        if state["first"]:
+            state["first"] = False
+            page.closed = True
+            raise RuntimeError("target closed")  # window vanished mid-pump
+
+    orchestrator.wait_until_all_closed([("vc", ctx)], pump=pump)  # must return, not raise
+
+
+def test_wait_treats_errored_context_as_closed():
+    class _Boom:
+        @property
+        def pages(self):
+            raise RuntimeError("target closed")
+
+    orchestrator.wait_until_all_closed([("vc", _Boom())], pump=lambda pg: None)

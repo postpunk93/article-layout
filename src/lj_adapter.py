@@ -139,14 +139,38 @@ def _replace_marker_with_image(page, block, path, log):
         arg=n_before,
         timeout=60000,
     )
+    # Tag this image's figure so the caption pass can find it. Captions are NOT set here:
+    # uploading the NEXT image resets the previous figure's caption textarea to empty
+    # (the figure element survives, only its value is wiped), so all captions are written
+    # in a second pass AFTER every upload (see _set_captions).
+    page.evaluate(
+        """(file) => {
+            const imgs = document.querySelectorAll('.public-DraftEditor-content img');
+            const fig = imgs[imgs.length - 1].closest('figure');
+            if (fig) fig.setAttribute('data-lj-file', file);
+        }""",
+        block.file,
+    )
     log(f"  image: {block.file} caption={'yes' if block.caption else 'no'}")
-    if block.caption:
-        # Images upload in document order, so the just-added figure's caption textarea
-        # is the last one in the DOM.
-        cap_loc = page.locator(CAPTION_SEL).last
-        cap_loc.click()
-        page.keyboard.type("".join(r.text for r in block.caption))
     time.sleep(0.3)
+
+
+def _set_captions(page, doc, log):
+    """Second pass: write captions after EVERY image is uploaded. Done inline, each
+    upload wipes the previously-set caption textarea (the figure element persists, its
+    value is reset), so captioning has to wait until no more uploads will run. Each
+    figure was tagged with its source filename during upload."""
+    for block in doc.blocks:
+        if not (isinstance(block, Image) and block.caption):
+            continue
+        text = "".join(r.text for r in block.caption)
+        ta = page.locator(f'figure[data-lj-file="{block.file}"] textarea').first
+        if not ta.count():
+            log(f"  caption: figure for {block.file} not found — skipping caption")
+            continue
+        ta.click()
+        ta.fill(text)
+        log(f"  caption {block.file}: {text!r}")
 
 
 def build_document(page, doc, images_dir, log=print):
@@ -167,6 +191,10 @@ def build_document(page, doc, images_dir, log=print):
             _replace_marker_with_image(page, block, path, log)
         except Exception as e:  # noqa: BLE001 — report and continue
             log(f"  image {block.file} failed ({str(e)[:80]}) — marker left in body")
+
+    # Captions in a SECOND pass: each upload wipes the prior figure's caption value, so
+    # they must be written only after every upload is done.
+    _set_captions(page, doc, log)
 
     # Stop at the autosaved draft — NEVER click PUBLISH_SEL. The footer "Черновики"
     # line gains "(сохранен в HH:MM:SS)" each time autosave completes. The URL gains

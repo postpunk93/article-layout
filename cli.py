@@ -113,7 +113,7 @@ def cmd_layout(args):
             "(Ctrl+C also exits)."
         )
         orchestrator.wait_until_all_closed(
-            contexts, pump=lambda page: page.wait_for_timeout(500)
+            contexts, pump=lambda pg: pg.wait_for_timeout(500)
         )
 
     if failures:

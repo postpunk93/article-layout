@@ -58,13 +58,13 @@ def manual_login(client: str, platform: str, url: str, root: Path = PROFILES_ROO
     exe = chrome_executable()
     if not exe:
         raise RuntimeError("Chrome not found — install Chrome to log in to this platform.")
-    pdir = profile_dir(client, platform, root)
+    pdir = profile_dir(client, root)
     pdir.mkdir(parents=True, exist_ok=True)
     return subprocess.Popen([exe, f"--user-data-dir={pdir.resolve()}", url])
 
 
-def profile_dir(client: str, platform: str, root: Path = PROFILES_ROOT) -> Path:
-    return Path(root) / client / platform
+def profile_dir(client: str, root: Path = PROFILES_ROOT) -> Path:
+    return Path(root) / client
 
 
 def list_clients(root: Path = PROFILES_ROOT) -> list[str]:
@@ -74,29 +74,22 @@ def list_clients(root: Path = PROFILES_ROOT) -> list[str]:
     return sorted(p.name for p in root.iterdir() if p.is_dir())
 
 
-def list_accounts(client: str, root: Path = PROFILES_ROOT) -> list[str]:
-    client_dir = Path(root) / client
-    if not client_dir.exists():
-        return []
-    return sorted(p.name for p in client_dir.iterdir() if p.is_dir())
+def _meta_path(client: str, root: Path = PROFILES_ROOT) -> Path:
+    return profile_dir(client, root) / "meta.json"
 
 
-def _meta_path(client: str, platform: str, root: Path = PROFILES_ROOT) -> Path:
-    return profile_dir(client, platform, root) / "meta.json"
-
-
-def read_meta(client: str, platform: str, root: Path = PROFILES_ROOT) -> dict:
-    path = _meta_path(client, platform, root)
+def read_meta(client: str, root: Path = PROFILES_ROOT) -> dict:
+    path = _meta_path(client, root)
     if not path.exists():
         return {}
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def write_meta(client: str, platform: str, updates: dict, root: Path = PROFILES_ROOT) -> dict:
-    """Merge `updates` into the profile's meta.json (creating the dir) and return it."""
-    pdir = profile_dir(client, platform, root)
+def write_meta(client: str, updates: dict, root: Path = PROFILES_ROOT) -> dict:
+    """Merge `updates` into the client's meta.json (creating the dir) and return it."""
+    pdir = profile_dir(client, root)
     pdir.mkdir(parents=True, exist_ok=True)
-    meta = read_meta(client, platform, root)
+    meta = read_meta(client, root)
     meta.update(updates)
     (pdir / "meta.json").write_text(
         json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8"
@@ -160,7 +153,7 @@ def open_context(p, client: str, platform: str, headless: bool, root: Path = PRO
     the automation switch removed and navigator.webdriver masked. Falls back to
     bundled Chromium only if Chrome isn't installed.
     """
-    pdir = profile_dir(client, platform, root)
+    pdir = profile_dir(client, root)
     pdir.mkdir(parents=True, exist_ok=True)
     kwargs = dict(
         user_data_dir=str(pdir.resolve()),
@@ -186,7 +179,7 @@ def is_alive(client: str, platform: str, headless: bool = True,
     """
     from playwright.sync_api import sync_playwright
 
-    if not profile_dir(client, platform, root).exists():
+    if not profile_dir(client, root).exists():
         return False
     entry = PLATFORMS[platform]
     with sync_playwright() as p:

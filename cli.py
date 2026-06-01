@@ -46,14 +46,28 @@ def cmd_login(args):
 def cmd_status(args):
     clients = [args.client] if args.client else sessions.list_clients()
     if not clients:
-        print("No profiles yet. Use: python cli.py login <client> <platform>")
+        print("No profiles yet. Use: python cli.py login <client>")
         return 0
+    platforms = sessions.known_platforms()
+    markers = {p: sessions.PLATFORMS[p]["alive_marker"] for p in platforms}
     print(f"{'client':<16}{'platform':<10}{'state':<8}label")
-    for client in clients:
-        for platform in sessions.list_accounts(client):
-            state = "alive" if sessions.is_alive(client, platform) else "DEAD"
-            label = sessions.read_meta(client, platform).get("label", "")
-            print(f"{client:<16}{platform:<10}{state:<8}{label}")
+    with sync_playwright() as p:
+        for client in clients:
+            label = sessions.read_meta(client).get("label", "")
+            ctx, _ = sessions.open_context(p, client, headless=True)
+            try:
+                pages = {}
+                for platform in platforms:
+                    page = ctx.new_page()
+                    page.goto(sessions.PLATFORMS[platform]["editor_url"],
+                              wait_until="domcontentloaded")
+                    pages[platform] = page
+                dead = orchestrator.check_alive(pages, markers)
+            finally:
+                ctx.close()
+            for platform in platforms:
+                state = "DEAD" if platform in dead else "alive"
+                print(f"{client:<16}{platform:<10}{state:<8}{label}")
     return 0
 
 

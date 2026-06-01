@@ -24,33 +24,22 @@ def _today() -> str:
 
 
 def cmd_login(args):
-    platform = args.platform
-    if platform not in sessions.PLATFORMS:
-        print(f"Unknown platform {platform!r}; known: {', '.join(sessions.known_platforms())}")
-        return 2
-    entry = sessions.PLATFORMS[platform]
-    if entry.get("manual_login"):
-        # Login captcha blanks under CDP — launch a plain Chrome (no automation).
-        url = entry.get("login_url", entry["editor_url"])
-        proc = sessions.manual_login(args.client, platform, url)
-        print(f"Chrome open for {args.client}/{platform}. Log in, then come back here.")
-        try:
-            input("Press Enter once you're logged in to save the session...")
-        except EOFError:
-            time.sleep(120)
-        proc.terminate()
-    else:
-        with sync_playwright() as p:
-            ctx, page = sessions.open_context(p, args.client, platform, headless=False)
-            page.goto(entry["editor_url"], wait_until="domcontentloaded")
-            print(f"Browser open for {args.client}/{platform}. Log in, then come back here.")
-            try:
-                input("Press Enter once you're logged in to save the session...")
-            except EOFError:
-                time.sleep(120)
-            ctx.close()
-    sessions.write_meta(args.client, platform, {"last_login_at": _today()})
-    print(f"Saved session for {args.client}/{platform}.")
+    # One plain Chrome on the client's shared profile, a tab per platform's login/editor
+    # URL. Log into the ones you need, then press Enter. NEVER publishes anything.
+    urls = []
+    for platform in sessions.known_platforms():
+        entry = sessions.PLATFORMS[platform]
+        urls.append(entry.get("login_url", entry["editor_url"]))
+    proc = sessions.manual_login(args.client, urls)
+    print(f"Chrome open for {args.client} with a tab per platform. Log in to the ones "
+          f"you need, then come back here.")
+    try:
+        input("Press Enter once you're logged in to save the session...")
+    except EOFError:
+        time.sleep(120)
+    proc.terminate()
+    sessions.write_meta(args.client, {"last_login_at": _today()})
+    print(f"Saved session for {args.client}.")
     return 0
 
 
@@ -131,9 +120,8 @@ def main():
     parser = argparse.ArgumentParser(prog="cli.py")
     sub = parser.add_subparsers(dest="command", required=True)
 
-    p_login = sub.add_parser("login", help="open a browser to log in to a (client, platform)")
+    p_login = sub.add_parser("login", help="open one Chrome to log in to all platforms for a client")
     p_login.add_argument("client")
-    p_login.add_argument("platform")
     p_login.set_defaults(func=cmd_login)
 
     p_status = sub.add_parser("status", help="show alive/dead per session")

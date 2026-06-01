@@ -54,11 +54,11 @@ def cmd_status(args):
     with sync_playwright() as p:
         for client in clients:
             label = sessions.read_meta(client).get("label", "")
-            ctx, _ = sessions.open_context(p, client, headless=True)
+            ctx, first_page = sessions.open_context(p, client, headless=True)
             try:
                 pages = {}
-                for platform in platforms:
-                    page = ctx.new_page()
+                for i, platform in enumerate(platforms):
+                    page = first_page if i == 0 else ctx.new_page()
                     page.goto(sessions.PLATFORMS[platform]["editor_url"],
                               wait_until="domcontentloaded")
                     pages[platform] = page
@@ -95,13 +95,14 @@ def cmd_layout(args):
     markers = {p: sessions.PLATFORMS[p]["alive_marker"] for p in platforms}
     failures = []
     with sync_playwright() as p:
-        ctx, _ = sessions.open_context(p, args.client, headless=False)
+        ctx, first_page = sessions.open_context(p, args.client, headless=False)
 
         # Liveness phase (all-or-nothing): one tab per platform, navigate, check marker.
+        # Reuse the profile's initial tab for the first platform so no blank tab lingers.
         print(f"Checking sessions for {args.client}: {', '.join(platforms)} ...")
         pages = {}
-        for platform in platforms:
-            page = ctx.new_page()
+        for i, platform in enumerate(platforms):
+            page = first_page if i == 0 else ctx.new_page()
             try:
                 page.goto(sessions.PLATFORMS[platform]["editor_url"],
                           wait_until="domcontentloaded")

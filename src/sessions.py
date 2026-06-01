@@ -45,22 +45,24 @@ def chrome_executable() -> str | None:
     return None
 
 
-def manual_login(client: str, platform: str, url: str, root: Path = PROFILES_ROOT):
-    """Launch the user's Chrome by hand (NO CDP/automation) on the profile dir.
+def _login_argv(exe: str, pdir: Path, urls: list[str]) -> list[str]:
+    return [exe, f"--user-data-dir={pdir.resolve()}", *urls]
 
-    Habr's and Dzen's login captcha (Yandex SmartCaptcha) renders a blank box in any
-    CDP-driven browser, so a normal manual login must use a plain Chrome process. Once
-    logged in, layout/is_alive reuse the profile via the standard open_context. Returns
-    the Popen so the caller can terminate it after login; passes an ABSOLUTE
-    user_data_dir (a relative one makes system Chrome fail to launch). Raises if Chrome
-    isn't installed.
+
+def manual_login(client: str, urls: list[str], root: Path = PROFILES_ROOT):
+    """Launch the user's plain Chrome (NO CDP) on the CLIENT's shared profile.
+
+    Opens a tab per URL so the user can log into every platform in one sitting.
+    Habr/Dzen SmartCaptcha renders blank under CDP, so login must use a plain Chrome
+    process; afterwards layout/status reuse the profile via open_context. Returns the
+    Popen so the caller can terminate it after login. Raises if Chrome isn't installed.
     """
     exe = chrome_executable()
     if not exe:
-        raise RuntimeError("Chrome not found — install Chrome to log in to this platform.")
+        raise RuntimeError("Chrome not found — install Chrome to log in.")
     pdir = profile_dir(client, root)
     pdir.mkdir(parents=True, exist_ok=True)
-    return subprocess.Popen([exe, f"--user-data-dir={pdir.resolve()}", url])
+    return subprocess.Popen(_login_argv(exe, pdir, urls))
 
 
 def profile_dir(client: str, root: Path = PROFILES_ROOT) -> Path:

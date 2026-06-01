@@ -119,7 +119,7 @@ def _select_range(page, container_selector, start, end):
 def _body_block_ids(page):
     """data-id of each BODY block in document order, EXCLUDING the title block.
 
-    On vc.ru the title is itself a .ce-block inside .codex-editor (its editable has
+    On dtf.ru the title is itself a .ce-block inside .codex-editor (its editable has
     data-placeholder="Заголовок"). The pasted body blocks are all the other .ce-blocks,
     so we filter the title out to map the i-th IR block to the i-th body block.
     """
@@ -140,7 +140,7 @@ def _open_toolbox_on_active(page):
 
     The caller must have placed the caret in the target (empty) block with a REAL
     click first — Editor.js anchors the toolbar on real caret events, and the real
-    click also scrolls the block into view. Two VC specifics: the '+' button is never
+    click also scrolls the block into view. Two Osnova specifics: the '+' button is never
     "visible" to Playwright (0-size until hover), so JS-click it; and the toolbox
     popover can render outside the viewport for a scrolled block, so wait for its
     'opened' class as ATTACHED (visible-waiting would time out).
@@ -182,7 +182,7 @@ def _replace_paragraph_with_quote(page, block_id, quote):
 
 def _replace_marker_with_image(page, block, path, log):
     """Find the [[IMG file]] marker paragraph, empty it, and upload a native image in
-    its place (VC strips <img>/data-URI on paste). The caption goes into the image
+    its place (DTF strips <img>/data-URI on paste). The caption goes into the image
     block's native caption field. Marker uses a space (not a colon) — see emit_body."""
     needle = f"[[IMG {block.file}]]"
     idx = page.evaluate(

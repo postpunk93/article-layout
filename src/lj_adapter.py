@@ -95,24 +95,35 @@ def _replace_marker_with_image(page, block, path, log):
         return
     block_loc = page.locator('[data-block="true"]').nth(idx)
     block_loc.scroll_into_view_if_needed()
-    block_loc.click()
-    # Let the Draft.js selection settle in this block before clearing. Without this,
-    # the caret can still be in the PREVIOUS image's caption textarea (we just typed
-    # there), so Home/Shift+End/Delete miss and the upload lands at the stale caret —
-    # leaving this marker behind and the image misplaced.
-    page.wait_for_timeout(200)
-    # Empty ONLY this marker block. DraftJS treats Ctrl+A as "select the whole editor",
-    # so Ctrl+A + Delete would wipe the entire body — select just this line instead.
-    # Retry the clear until the marker text is actually gone (the caret may have needed
-    # an extra beat to land here). Safe to repeat — the image hasn't uploaded yet.
-    for _ in range(3):
-        page.keyboard.press("Home")
-        page.keyboard.press("Shift+End")
-        page.keyboard.press("Delete")
-        if needle not in page.evaluate("() => document.querySelector('.public-DraftEditor-content').innerText"):
-            break
+    # Place the caret INSIDE this marker block and VERIFY it landed before deleting
+    # anything. The caret can lag behind the click — e.g. it's still in the previous
+    # image's caption textarea we just typed into — and a blind Home/Shift+End/Delete
+    # would then select and EAT whichever block the caret is really in (observed:
+    # the preceding paragraph losing its opening words). Re-click until getSelection's
+    # anchor is in THIS block; only then delete.
+    placed = False
+    for _ in range(6):
         block_loc.click()
-        page.wait_for_timeout(200)
+        page.wait_for_timeout(150)
+        placed = block_loc.evaluate(
+            """(el) => {
+                const s = window.getSelection();
+                let n = s && s.anchorNode;
+                while (n && n !== el) n = n.parentElement;
+                return !!n;
+            }"""
+        )
+        if placed:
+            break
+    if not placed:
+        log(f"  could not place caret in marker block for {block.file} — skipping")
+        return
+    # Caret confirmed in this single-line marker block. Select just this line and
+    # delete it (Ctrl+A would select the WHOLE Draft.js editor). One pass is safe now —
+    # the caret can't be in a sibling block.
+    page.keyboard.press("Home")
+    page.keyboard.press("Shift+End")
+    page.keyboard.press("Delete")
     n_before = page.evaluate("() => document.querySelectorAll('.public-DraftEditor-content img').length")
     # The single PLupload input uploads at the cursor (this emptied block); set_input_files
     # dispatches the change event PLupload listens for — no slash menu / file chooser.
@@ -136,3 +147,45 @@ def _replace_marker_with_image(page, block, path, log):
         cap_loc.click()
         page.keyboard.type("".join(r.text for r in block.caption))
     time.sleep(0.3)
+
+
+def build_document(page, doc, images_dir, log=print):
+    images_dir = Path(images_dir)
+    page.context.grant_permissions(["clipboard-read", "clipboard-write"])
+
+    _open_editor(page, log)
+    _set_title_and_body(page, doc, log)
+
+    images = [b for b in doc.blocks if isinstance(b, Image)]
+    log(f"Uploading {len(images)} image(s)…")
+    for block in images:
+        path = images_dir / block.file
+        if not path.exists():
+            log(f"  IMAGE MISSING ON DISK: {path} — leaving marker [[IMG:{block.file}]]")
+            continue
+        try:
+            _replace_marker_with_image(page, block, path, log)
+        except Exception as e:  # noqa: BLE001 — report and continue
+            log(f"  image {block.file} failed ({str(e)[:80]}) — marker left in body")
+
+    # Stop at the autosaved draft — NEVER click PUBLISH_SEL. The footer "Черновики"
+    # line gains "(сохранен в HH:MM:SS)" each time autosave completes. The URL gains
+    # ?draft= right after the body paste — long before the images finish — so it is
+    # NOT a safe signal; the footer timestamp is. Wait for it to ADVANCE past whatever
+    # it read before the image edits, so we know the latest content is saved.
+    # (The site renders the leading с as a Latin 'c', so match the ending "охранен в".)
+    before = page.evaluate(
+        r"() => { const m=(document.body.innerText||'').match(/охранен в [\d:]+/i); return m?m[0]:''; }"
+    )
+    try:
+        page.wait_for_function(
+            r"""(before) => {
+                const m = (document.body.innerText || '').match(/охранен в [\d:]+/i);
+                return !!m && m[0] !== before;
+            }""",
+            arg=before,
+            timeout=40000,
+        )
+        log("Draft autosaved.")
+    except Exception:  # noqa: BLE001
+        log(f"WARNING: did not observe the saved indicator advance; draft may still be saving. URL: {page.url}")

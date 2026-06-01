@@ -43,6 +43,8 @@ def build():
     doc.add_paragraph("Короткий абзац под H2 для проверки структуры.")
 
     doc.add_heading("Подзаголовок третьего уровня", level=3)
+    # A connective paragraph so the heading isn't glued straight onto the list.
+    doc.add_paragraph("Ниже — маркированный список ключевых пунктов.")
     doc.add_paragraph("Первый пункт", style="List Bullet")
     b = doc.add_paragraph(style="List Bullet")
     b.add_run("Пункт с ")
@@ -51,17 +53,27 @@ def build():
     b.add_run("курсивом").italic = True
     doc.add_paragraph("Третий пункт", style="List Bullet")
 
+    # Paragraph between the two lists (italic-only run, for run variety).
+    sep = doc.add_paragraph()
+    sep.add_run("А теперь те же действия по шагам.").italic = True
     doc.add_paragraph("Первый шаг", style="List Number")
     doc.add_paragraph("Второй шаг", style="List Number")
 
+    # Bold-only paragraph leading into the quote.
+    lead = doc.add_paragraph()
+    lead.add_run("Важная мысль перед цитатой.").bold = True
     q = doc.add_paragraph()
     qr = q.add_run("Это цитата — выделена жёлтым, должна стать нативным блоком цитаты.")
     qr.font.highlight_color = WD_COLOR_INDEX.YELLOW
 
+    doc.add_paragraph("Дальше идут две иллюстрации с подписями.")
     doc.add_picture(str(img1), width=Inches(2.5))
     cap1 = doc.add_paragraph()
     cap1.add_run("Подпись к первой картинке").italic = True
 
+    # Normal paragraph separating the two images (not italic, so it stays a paragraph,
+    # not the caption of image 1 — exercises the separate-paragraph caption boundary).
+    doc.add_paragraph("Небольшой комментарий между картинками.")
     doc.add_picture(str(img2), width=Inches(2.5))
     cap2 = doc.add_paragraph()
     cap2.add_run("Подпись ко второй картинке").italic = True

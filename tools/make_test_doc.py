@@ -12,7 +12,7 @@ from docx.enum.text import WD_COLOR_INDEX
 FIX = Path("fixtures")
 
 
-def _tiny_png(path: Path, rgb: bytes):
+def _tiny_png(path: Path, rgb: tuple[int, int, int]):
     # Minimal solid-color PNG via Pillow if present, else a 1x1 raw fallback.
     try:
         from PIL import Image

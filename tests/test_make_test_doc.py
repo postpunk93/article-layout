@@ -5,13 +5,15 @@ from docx.enum.text import WD_COLOR_INDEX
 
 OUT = Path("fixtures/synthetic.docx")
 
-def test_generator_produces_doc_with_conventions(tmp_path):
+def test_generator_produces_doc_with_conventions():
     subprocess.run([sys.executable, "tools/make_test_doc.py"], check=True)
     assert OUT.exists()
     doc = Document(str(OUT))
     styles = [p.style.name for p in doc.paragraphs]
     assert "Heading 1" in styles          # title
     assert "Heading 2" in styles and "Heading 3" in styles
+    assert len(doc.inline_shapes) == 2    # two images
+    assert "List Bullet" in styles and "List Number" in styles
     # at least one run is yellow-highlighted (the quote)
     highlighted = [r for p in doc.paragraphs for r in p.runs
                    if r.font.highlight_color == WD_COLOR_INDEX.YELLOW]

@@ -92,37 +92,44 @@ def cmd_layout(args):
     images_dir = slug_dir / "images"
     print(f"Parsed: title={doc.title!r}, blocks={len(doc.blocks)}")
 
-    print(f"Checking sessions for {args.client}: {', '.join(platforms)} ...")
-    ok, dead = orchestrator.precheck(args.client, platforms, sessions.is_alive)
-    if not ok:
-        for client, platform in dead:
-            print(f"DEAD: {client}/{platform} — run: python cli.py login {client} {platform}")
-        print("Laid out nothing (all-or-nothing). Log in the dead sessions, then retry.")
-        return 1
-
+    markers = {p: sessions.PLATFORMS[p]["alive_marker"] for p in platforms}
     failures = []
-    contexts = []
     with sync_playwright() as p:
+        ctx, _ = sessions.open_context(p, args.client, headless=False)
+
+        # Liveness phase (all-or-nothing): one tab per platform, navigate, check marker.
+        print(f"Checking sessions for {args.client}: {', '.join(platforms)} ...")
+        pages = {}
         for platform in platforms:
-            entry = sessions.PLATFORMS[platform]
+            page = ctx.new_page()
+            page.goto(sessions.PLATFORMS[platform]["editor_url"],
+                      wait_until="domcontentloaded")
+            pages[platform] = page
+        dead = orchestrator.check_alive(pages, markers)
+        if dead:
+            for platform in dead:
+                print(f"DEAD: {args.client}/{platform} — run: python cli.py login {args.client}")
+            print("Laid out nothing (all-or-nothing). Log in, then retry.")
+            ctx.close()
+            return 1
+
+        # Build phase: same tabs, sequential (real-clipboard paste can't run in parallel).
+        contexts = [("window", ctx)]
+        for platform in platforms:
             print(f"--- {args.client}/{platform} ---")
-            ctx, page = sessions.open_context(p, args.client, platform, headless=False)
-            contexts.append((platform, ctx))
             try:
-                entry["build_document"](page, doc, images_dir)
+                sessions.PLATFORMS[platform]["build_document"](pages[platform], doc, images_dir)
                 print(f"Done — {platform} draft built. Review and publish manually.")
             except Exception as e:  # noqa: BLE001 — report and continue to next platform
                 failures.append((platform, repr(e)))
-                print(f"FAILED {platform}: {e!r} (window left open)")
+                print(f"FAILED {platform}: {e!r} (tab left open)")
 
         print(
-            f"\nAll {len(contexts)} window(s) open. Review and publish manually. "
-            "Nothing will close on its own — close each window yourself when done "
+            f"\nAll {len(platforms)} tab(s) open in one window. Review and publish "
+            "manually. Nothing closes on its own — close the window yourself when done "
             "(Ctrl+C also exits)."
         )
-        orchestrator.wait_until_all_closed(
-            contexts, pump=lambda pg: pg.wait_for_timeout(500)
-        )
+        orchestrator.wait_until_all_closed(contexts, pump=lambda pg: pg.wait_for_timeout(500))
 
     if failures:
         print("Failures: " + ", ".join(f"{p}: {err}" for p, err in failures))

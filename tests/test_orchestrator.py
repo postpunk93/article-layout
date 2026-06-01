@@ -90,3 +90,21 @@ def test_wait_treats_errored_context_as_closed():
             raise RuntimeError("target closed")
 
     orchestrator.wait_until_all_closed([("vc", _Boom())], pump=lambda pg: None)
+
+
+def test_wait_returns_only_after_every_window_closed():
+    page_a = _FakePage(closed=False)
+    page_b = _FakePage(closed=False)
+    ctx_a = _FakeCtx([page_a])
+    ctx_b = _FakeCtx([page_b])
+    pumps = {"n": 0}
+
+    def pump(_pg):
+        pumps["n"] += 1
+        if pumps["n"] == 1:
+            page_a.closed = True   # first window closed; one still open -> must keep waiting
+        elif pumps["n"] == 2:
+            page_b.closed = True   # now all closed -> next check returns
+
+    orchestrator.wait_until_all_closed([("vc", ctx_a), ("pikabu", ctx_b)], pump=pump)
+    assert pumps["n"] == 2  # proves it did NOT return after only the first window closed

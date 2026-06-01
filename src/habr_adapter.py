@@ -31,6 +31,9 @@ from src.ir import Image, Quote
 
 HOME_URL = "https://habr.com/ru/feed/"
 LOGIN_URL = "https://habr.com/ru/auth/login/"
+# Direct editor URL — the navbar pencil became a <button>-popup (no longer an <a>),
+# so opening by URL is the reliable path; the pencil click is kept as a fallback.
+NEW_ARTICLE_URL = "https://habr.com/ru/article/new/"
 # The "write" pencil in the top navbar routes to the right editor for the account
 # (sandbox or full); it renders only for a logged-in user, so it doubles as the
 # liveness marker.
@@ -171,10 +174,15 @@ def _set_captions(page, doc, log):
 def build_document(page, doc, images_dir, log=print):
     images_dir = Path(images_dir)
 
-    log(f"Opening editor via navbar pencil ({HOME_URL})")
-    page.goto(HOME_URL, wait_until="domcontentloaded")
-    page.locator(PENCIL_SEL).first.click()
-    page.wait_for_selector(BODY_SEL, timeout=30000)
+    log(f"Opening editor at {NEW_ARTICLE_URL}")
+    page.goto(NEW_ARTICLE_URL, wait_until="domcontentloaded")
+    try:
+        page.wait_for_selector(BODY_SEL, timeout=15000)
+    except Exception:  # noqa: BLE001 — fall back to the navbar pencil
+        log("Direct editor URL didn't load body; falling back to the navbar pencil")
+        page.goto(HOME_URL, wait_until="domcontentloaded")
+        page.locator(PENCIL_SEL).first.click()
+        page.wait_for_selector(BODY_SEL, timeout=30000)
     time.sleep(2)
 
     log(f"Title: {doc.title!r}")

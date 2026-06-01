@@ -21,7 +21,11 @@ ALIVE_SEL = BODY_SEL
 
 def body_html(doc):
     """Clean body HTML for the paste: real <blockquote> (LJ makes a native quote
-    block), images as [[IMG:file]] markers replaced after the paste."""
+    block), images as [[IMG:file]] markers replaced after the paste.
+
+    Probe (a), verified live: a pasted <blockquote> becomes a native Draft.js
+    <blockquote data-block="true"> quote block, and <ul>/<ol> become native
+    list-item blocks — no post-paste convert pass is needed (unlike VC)."""
     return emit_body(doc, caption_marker=False, quote_as_paragraph=False, img_sep=":")
 
 

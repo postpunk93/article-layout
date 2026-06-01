@@ -93,22 +93,28 @@ def cmd_layout(args):
         return 1
 
     failures = []
-    for platform in platforms:
-        entry = sessions.PLATFORMS[platform]
-        print(f"--- {args.client}/{platform} ---")
-        with sync_playwright() as p:
+    contexts = []
+    with sync_playwright() as p:
+        for platform in platforms:
+            entry = sessions.PLATFORMS[platform]
+            print(f"--- {args.client}/{platform} ---")
             ctx, page = sessions.open_context(p, args.client, platform, headless=False)
+            contexts.append((platform, ctx))
             try:
                 entry["build_document"](page, doc, images_dir)
                 print(f"Done — {platform} draft built. Review and publish manually.")
             except Exception as e:  # noqa: BLE001 — report and continue to next platform
                 failures.append((platform, repr(e)))
                 print(f"FAILED {platform}: {e!r} (window left open)")
-            try:
-                input(f"Press Enter to close {platform} browser...")
-            except EOFError:
-                time.sleep(15)
-            ctx.close()
+
+        print(
+            f"\nAll {len(contexts)} window(s) open. Review and publish manually. "
+            "Nothing will close on its own — close each window yourself when done "
+            "(Ctrl+C also exits)."
+        )
+        orchestrator.wait_until_all_closed(
+            contexts, pump=lambda pg: pg.wait_for_timeout(500)
+        )
 
     if failures:
         print("Failures: " + ", ".join(f"{p}: {err}" for p, err in failures))

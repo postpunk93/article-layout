@@ -32,3 +32,32 @@ def precheck(client: str, platforms: list[str],
     """
     dead = [(client, p) for p in platforms if not alive_fn(client, p)]
     return (not dead, dead)
+
+
+def wait_until_all_closed(contexts, pump):
+    """Block until the user closes every browser window.
+
+    `contexts` is a list of (label, ctx); each ctx exposes `.pages`, and each
+    page exposes `is_closed()`. `pump(page)` yields briefly to dispatch browser
+    events (in real use, `page.wait_for_timeout(...)`); it may raise if the page
+    just closed — that is swallowed and the context re-evaluated as closed.
+    `pump` MUST block (it is the loop's only throttle — there is no other sleep).
+
+    This NEVER closes a window itself; it only waits for the user to do so.
+    """
+    while True:
+        live = []
+        for label, ctx in contexts:
+            try:
+                if any(not pg.is_closed() for pg in ctx.pages):
+                    live.append((label, ctx))
+            except Exception:  # noqa: BLE001 — a vanished context counts as closed
+                pass
+        if not live:
+            return
+        try:
+            # Assumes one page per context (true today: each platform is its own
+            # window). If "tabs in one window" lands, pump the first LIVE page.
+            pump(live[0][1].pages[0])
+        except Exception:  # noqa: BLE001 — window closed mid-pump; loop re-checks
+            pass

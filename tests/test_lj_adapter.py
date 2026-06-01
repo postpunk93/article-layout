@@ -13,3 +13,6 @@ def test_body_html_emits_real_blockquote_and_img_markers():
     assert "<blockquote>quoted</blockquote>" in html
     assert "[[IMG:image1.png]]" in html
     assert "data:image" not in html
+    # Probe (b): LJ image blocks have a native caption field, so captions are set
+    # natively (caption_marker=False) — no [[CAP:]] marker rides in the body.
+    assert "[[CAP:" not in html

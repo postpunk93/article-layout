@@ -307,9 +307,21 @@ def build_document(page, doc, images_dir: Path, log=print):
         except Exception as e:  # noqa: BLE001
             log(f"  image {block.file} failed ({str(e)[:80]}) — marker left in body")
 
-    # 5. Confirm the draft saved (URL gains an id=NNN).
+    # 5. Confirm the draft autosaved. The URL gains id= after the FIRST paste (long
+    # before images finish uploading), so it is NOT a reliable "saved" signal — wait for
+    # the footer status to settle on «Сохранено» (not «Сохранение») after the last upload.
+    # The footer renders the status as its own element; a wrapping element's innerText may
+    # read "Опубликовать\nСохранено", so match the element whose text STARTS with Сохран.
     try:
-        page.wait_for_function("() => location.href.includes('id=')", timeout=15000)
-        log(f"Draft saved: {page.url}")
+        page.wait_for_function(
+            """() => {
+                const txt = [...document.querySelectorAll('button, span, div')]
+                    .map(e => (e.innerText || '').trim())
+                    .find(t => /^Сохран(ено|яется|ение)/i.test(t)) || '';
+                return /^Сохранено/i.test(txt);
+            }""",
+            timeout=20000,
+        )
+        log(f"Draft autosaved (footer «Сохранено»): {page.url}")
     except Exception:
-        log(f"WARNING: did not detect saved-draft URL; current: {page.url}")
+        log(f"WARNING: did not observe «Сохранено» footer status; current: {page.url}")

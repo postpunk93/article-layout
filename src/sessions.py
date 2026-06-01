@@ -5,8 +5,8 @@ A profile is a persistent Chromium context stored at `.profiles/<client>/` —
 ONE shared profile per client, logged into every platform at once (the platforms
 are different domains, so their logins don't collide). The folder existing IS the
 fact that the client is set up — there is no central registry. Per-client metadata
-lives in a `meta.json` beside the context. Liveness is never cached: `alive_on_page`
-checks a logged-in marker on an already-open page every time.
+lives in a `meta.json` beside the context. Liveness is never cached: it is
+re-checked against the live site every time (see `orchestrator.check_alive`).
 """
 import json
 import os
@@ -171,12 +171,3 @@ def open_context(p, client: str, headless: bool, root: Path = PROFILES_ROOT):
     ctx.add_init_script(_MASK_WEBDRIVER)
     page = ctx.pages[0] if ctx.pages else ctx.new_page()
     return ctx, page
-
-
-def alive_on_page(page, marker: str, timeout_ms: int = 8000) -> bool:
-    """True if the logged-in marker appears on an already-navigated page."""
-    try:
-        page.wait_for_selector(marker, timeout=timeout_ms)
-        return True
-    except Exception:  # noqa: BLE001 — any failure means not logged in / not loaded
-        return False

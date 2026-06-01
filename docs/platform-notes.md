@@ -8,6 +8,11 @@
 
 # Platform notes (VC + Pikabu + Habr + Smartlab)
 
+> **Profiles are per-client now.** Each client has ONE shared Chrome profile at
+> `.profiles/<client>/`, logged into every platform at once. `layout` opens that
+> profile in a single window with one tab per requested platform. (Older builds used
+> a separate `.profiles/<client>/<platform>/` profile per platform.)
+
 Consolidated, durable findings from the platform-discovery experiments (the one-off
 probe scripts that produced these have been removed; their history is in git). This
 is the reference for maintaining the adapters and for onboarding a new platform.

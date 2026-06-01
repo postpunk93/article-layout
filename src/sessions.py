@@ -1,10 +1,11 @@
 # src/sessions.py
 """Single owner of browser-profile logic for the article-layout adapters.
 
-A profile is a persistent Chromium context stored at
-`.profiles/<client>/<platform>/`. The folder existing IS the fact that the
-account is set up — there is no central registry. Per-profile metadata lives
-in a `meta.json` beside the context. Liveness is never cached: `alive_on_page`
+A profile is a persistent Chromium context stored at `.profiles/<client>/` —
+ONE shared profile per client, logged into every platform at once (the platforms
+are different domains, so their logins don't collide). The folder existing IS the
+fact that the client is set up — there is no central registry. Per-client metadata
+lives in a `meta.json` beside the context. Liveness is never cached: `alive_on_page`
 checks a logged-in marker on an already-open page every time.
 """
 import json
@@ -46,6 +47,7 @@ def chrome_executable() -> str | None:
 
 
 def _login_argv(exe: str, pdir: Path, urls: list[str]) -> list[str]:
+    """Chrome argv: exe, absolute shared-profile dir, then one tab per URL."""
     return [exe, f"--user-data-dir={pdir.resolve()}", *urls]
 
 
@@ -123,19 +125,19 @@ PLATFORMS = {
     },
     "smartlab": {
         "build_document": smartlab_adapter.build_document,
-        # is_alive navigates here and waits for ALIVE_SEL (a logged-in-only
+        # Liveness navigates here and waits for ALIVE_SEL (a logged-in-only
         # element). Editor form only renders for an authenticated user.
         "editor_url": smartlab_adapter.ADD_URL,
         "alive_marker": smartlab_adapter.ALIVE_SEL,
     },
     "dzen": {
         "build_document": dzen_adapter.build_document,
-        # is_alive navigates here and waits for ALIVE_SEL (the studio "+", present only
+        # Liveness navigates here and waits for ALIVE_SEL (the studio "+", present only
         # when logged in). Editor opens from the studio for an authenticated user.
         "editor_url": dzen_adapter.STUDIO_URL,
         "alive_marker": dzen_adapter.ALIVE_SEL,
         # Login needs a non-CDP Chrome (Yandex SmartCaptcha), like Habr; afterwards
-        # layout/is_alive reuse the profile via the standard open_context.
+        # layout/status reuse the profile via the standard open_context.
         "manual_login": True,
         "login_url": dzen_adapter.STUDIO_URL,
     },

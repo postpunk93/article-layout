@@ -2,7 +2,7 @@
 
 See docs/plans/2026-05-31-dzen-adapter-design.md. Like Habr, login needs a non-CDP
 Chrome (Yandex SmartCaptcha), so the dzen platform entry sets manual_login; once the
-profile is logged in, layout/is_alive reuse it through the standard open_context
+profile is logged in, layout/status reuse it through the standard open_context
 (Yandex marks the device trusted and the session survives). One real clipboard paste
 carries headings/paragraphs/bold/italic/quotes/lists natively; only images need a
 native-upload pass; stop at autosave, never publish.

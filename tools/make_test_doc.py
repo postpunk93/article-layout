@@ -4,12 +4,15 @@ GDoc conventions. Open it in Google Docs, review, then Download -> HTML into in/
 Conventions: Heading 1 = title; Heading 2/3 = headings; yellow highlight = quote;
 italic text under an image = caption; bold/italic inline; bulleted + numbered lists.
 """
+import os
 from pathlib import Path
 from docx import Document
 from docx.shared import Inches
 from docx.enum.text import WD_COLOR_INDEX
 
-FIX = Path("fixtures")
+# Output dir is overridable so the test can generate into a tmp dir instead of
+# clobbering the committed fixtures/ copy (python-docx output isn't byte-stable).
+FIX = Path(os.environ.get("SYNTHETIC_OUT_DIR", "fixtures"))
 
 
 def _tiny_png(path: Path, rgb: tuple[int, int, int]):

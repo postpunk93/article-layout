@@ -1,11 +1,11 @@
 # cli.py
 """Unified entry point for the article-layout adapters.
 
-  python cli.py login  <client> <platform>
+  python cli.py login  <client>
   python cli.py status [client]
   python cli.py layout <slug> <client> <platforms>   # platforms: vc,pikabu,habr | all
 
-`login` is interactive (run it yourself: `! python cli.py login acme pikabu`).
+`login` is interactive (run it yourself: `! python cli.py login acme`).
 `layout` checks every requested session first; if any is dead it lays out
 NOTHING and tells you who to log in.
 """
@@ -102,8 +102,11 @@ def cmd_layout(args):
         pages = {}
         for platform in platforms:
             page = ctx.new_page()
-            page.goto(sessions.PLATFORMS[platform]["editor_url"],
-                      wait_until="domcontentloaded")
+            try:
+                page.goto(sessions.PLATFORMS[platform]["editor_url"],
+                          wait_until="domcontentloaded")
+            except Exception:  # noqa: BLE001 — unreachable editor falls through to a DEAD verdict
+                pass
             pages[platform] = page
         dead = orchestrator.check_alive(pages, markers)
         if dead:

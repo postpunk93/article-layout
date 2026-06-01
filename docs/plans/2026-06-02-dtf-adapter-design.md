@@ -1,7 +1,7 @@
 # DTF adapter — design
 
 **Date:** 2026-06-02
-**Status:** approved (brainstorm), ready for implementation plan
+**Status:** implemented, validated e2e (DTF + VC regression)
 
 ## Goal
 

@@ -23,3 +23,21 @@ def body_html(doc):
     """Clean body HTML for the paste: real <blockquote> (LJ makes a native quote
     block), images as [[IMG:file]] markers replaced after the paste."""
     return emit_body(doc, caption_marker=False, quote_as_paragraph=False, img_sep=":")
+
+
+def _open_editor(page, log):
+    """Open a fresh post editor, dismiss the restore-draft modal, return when the
+    body contenteditable is present."""
+    log("Opening LiveJournal post editor…")
+    page.goto(POST_URL, wait_until="domcontentloaded")
+    page.wait_for_selector(BODY_SEL, timeout=30000)  # logged-in marker
+    page.wait_for_timeout(1200)
+    # "Открыть последний черновик?" — start clean, decline restoring the old draft.
+    for sel in ["text=Нет, спасибо", '[aria-label="Modal Window Close"]']:
+        loc = page.locator(sel)
+        if loc.count():
+            log("Dismissing restore-draft modal.")
+            loc.first.click()
+            page.wait_for_timeout(600)
+            break
+    log(f"Editor ready: {page.url}")

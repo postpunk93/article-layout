@@ -13,7 +13,7 @@ import os
 import subprocess
 from pathlib import Path
 
-from src import vc_adapter, pikabu_adapter, habr_adapter, smartlab_adapter, dzen_adapter
+from src import vc_adapter, pikabu_adapter, habr_adapter, smartlab_adapter, dzen_adapter, lj_adapter
 
 PROFILES_ROOT = Path(".profiles")
 
@@ -140,6 +140,14 @@ PLATFORMS = {
         # layout/status reuse the profile via the standard open_context.
         "manual_login": True,
         "login_url": dzen_adapter.STUDIO_URL,
+    },
+    "lj": {
+        "build_document": lj_adapter.build_document,
+        # Liveness navigates here and waits for ALIVE_SEL (the Draft.js body, present
+        # only when logged in). Standard open_context login (like VC/Smartlab) — the
+        # default profile drives fine under CDP, no manual_login needed.
+        "editor_url": lj_adapter.POST_URL,
+        "alive_marker": lj_adapter.ALIVE_SEL,
     },
 }
 

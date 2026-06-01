@@ -4,8 +4,8 @@
 A profile is a persistent Chromium context stored at
 `.profiles/<client>/<platform>/`. The folder existing IS the fact that the
 account is set up — there is no central registry. Per-profile metadata lives
-in a `meta.json` beside the context. Liveness is never cached: `is_alive`
-probes the live site every time.
+in a `meta.json` beside the context. Liveness is never cached: `alive_on_page`
+checks a logged-in marker on an already-open page every time.
 """
 import json
 import os
@@ -171,25 +171,10 @@ def open_context(p, client: str, headless: bool, root: Path = PROFILES_ROOT):
     return ctx, page
 
 
-def is_alive(client: str, platform: str, headless: bool = True,
-             timeout_ms: int = 8000, root: Path = PROFILES_ROOT) -> bool:
-    """Probe the live site: open the editor and look for the logged-in marker.
-
-    No cache — cookies can expire server-side at any time, so we always check.
-    A missing profile folder counts as dead (needs login).
-    """
-    from playwright.sync_api import sync_playwright
-
-    if not profile_dir(client, root).exists():
+def alive_on_page(page, marker: str, timeout_ms: int = 8000) -> bool:
+    """True if the logged-in marker appears on an already-navigated page."""
+    try:
+        page.wait_for_selector(marker, timeout=timeout_ms)
+        return True
+    except Exception:  # noqa: BLE001 — any failure means not logged in / not loaded
         return False
-    entry = PLATFORMS[platform]
-    with sync_playwright() as p:
-        ctx, page = open_context(p, client, headless=headless, root=root)
-        try:
-            page.goto(entry["editor_url"], wait_until="domcontentloaded")
-            page.wait_for_selector(entry["alive_marker"], timeout=timeout_ms)
-            return True
-        except Exception:
-            return False
-        finally:
-            ctx.close()

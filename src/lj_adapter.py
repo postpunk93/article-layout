@@ -41,3 +41,30 @@ def _open_editor(page, log):
             page.wait_for_timeout(600)
             break
     log(f"Editor ready: {page.url}")
+
+
+def _set_clipboard(page, html):
+    page.evaluate(
+        """async (html) => {
+            const plain = html.replace(/<[^>]+>/g, '');
+            await navigator.clipboard.write([new ClipboardItem({
+                'text/html': new Blob([html], {type: 'text/html'}),
+                'text/plain': new Blob([plain], {type: 'text/plain'}),
+            })]);
+        }""",
+        html,
+    )
+
+
+def _set_title_and_body(page, doc, log):
+    log(f"Title: {doc.title!r}")
+    page.fill(TITLE_SEL, doc.title)
+    # A real Ctrl+V only pastes into a FOCUSED tab; bring it to the foreground.
+    page.bring_to_front()
+    html = body_html(doc)
+    _set_clipboard(page, html)
+    page.click(BODY_SEL)
+    page.wait_for_timeout(300)
+    page.keyboard.press("Control+V")
+    page.wait_for_timeout(1500)
+    log("Body pasted.")

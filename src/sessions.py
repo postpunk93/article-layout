@@ -146,12 +146,13 @@ def known_platforms() -> list[str]:
     return sorted(PLATFORMS)
 
 
-def open_context(p, client: str, platform: str, headless: bool, root: Path = PROFILES_ROOT):
-    """Launch a persistent context on this profile and return (ctx, page).
+def open_context(p, client: str, headless: bool, root: Path = PROFILES_ROOT):
+    """Launch a persistent context on the CLIENT's shared profile; return (ctx, page).
 
-    Drives the installed Chrome (channel="chrome") with an ABSOLUTE user_data_dir,
-    the automation switch removed and navigator.webdriver masked. Falls back to
-    bundled Chromium only if Chrome isn't installed.
+    Drives installed Chrome (channel="chrome") on an ABSOLUTE user_data_dir, the
+    automation switch removed and navigator.webdriver masked. Falls back to bundled
+    Chromium only if Chrome isn't installed. The profile is shared by every platform —
+    different domains, so logins don't collide.
     """
     pdir = profile_dir(client, root)
     pdir.mkdir(parents=True, exist_ok=True)
@@ -183,7 +184,7 @@ def is_alive(client: str, platform: str, headless: bool = True,
         return False
     entry = PLATFORMS[platform]
     with sync_playwright() as p:
-        ctx, page = open_context(p, client, platform, headless=headless, root=root)
+        ctx, page = open_context(p, client, headless=headless, root=root)
         try:
             page.goto(entry["editor_url"], wait_until="domcontentloaded")
             page.wait_for_selector(entry["alive_marker"], timeout=timeout_ms)

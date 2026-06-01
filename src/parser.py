@@ -149,5 +149,13 @@ def parse(html: str) -> Document:
             if el.name == "p" and _is_yellow_quote(el, yellow_classes):
                 blocks.append(Quote(runs=runs))
                 continue
+            # A standalone, all-italic paragraph immediately after a caption-less image is
+            # its caption (GDoc emits the image alone in its <p> and the caption as the next
+            # <p> when the image sits on its own line — the same-<p> form is handled above).
+            if (blocks and isinstance(blocks[-1], Image)
+                    and blocks[-1].caption is None
+                    and runs and all(r.italic for r in runs)):
+                blocks[-1].caption = runs
+                continue
             blocks.append(Paragraph(runs=runs))
     return Document(title=title, blocks=blocks)

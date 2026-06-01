@@ -154,7 +154,7 @@ def parse(html: str) -> Document:
             # <p> when the image sits on its own line — the same-<p> form is handled above).
             if (blocks and isinstance(blocks[-1], Image)
                     and blocks[-1].caption is None
-                    and all(r.italic for r in runs)):
+                    and runs and all(r.italic for r in runs)):
                 blocks[-1].caption = runs
                 continue
             blocks.append(Paragraph(runs=runs))

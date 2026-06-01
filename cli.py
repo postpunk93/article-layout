@@ -69,6 +69,11 @@ def cmd_status(args):
 
 
 def cmd_layout(args):
+    """Build drafts for one client across platforms in a single browser window.
+
+    NEVER publishes: builds drafts and leaves the window open for the human to
+    review and publish manually. No publish action is ever taken here.
+    """
     try:
         platforms = orchestrator.parse_platforms(args.platforms, sessions.known_platforms())
     except ValueError as e:

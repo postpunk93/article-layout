@@ -1,3 +1,11 @@
+> ## NON-NEGOTIABLE: this project NEVER publishes
+>
+> Every adapter stops at a built draft (plus the platform's own autosave where it
+> exists) and leaves the browser window open. The final "publish"/"submit" action is
+> ALWAYS performed by a human. Whatever we change in the pipeline, no publish button is
+> ever clicked by this code. If this rule ever changes, the user will say so separately
+> and explicitly.
+
 # Platform notes (VC + Pikabu + Habr + Smartlab)
 
 Consolidated, durable findings from the platform-discovery experiments (the one-off

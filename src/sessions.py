@@ -1,11 +1,12 @@
 # src/sessions.py
 """Single owner of browser-profile logic for the article-layout adapters.
 
-A profile is a persistent Chromium context stored at
-`.profiles/<client>/<platform>/`. The folder existing IS the fact that the
-account is set up — there is no central registry. Per-profile metadata lives
-in a `meta.json` beside the context. Liveness is never cached: `is_alive`
-probes the live site every time.
+A profile is a persistent Chromium context stored at `.profiles/<client>/` —
+ONE shared profile per client, logged into every platform at once (the platforms
+are different domains, so their logins don't collide). The folder existing IS the
+fact that the client is set up — there is no central registry. Per-client metadata
+lives in a `meta.json` beside the context. Liveness is never cached: it is
+re-checked against the live site every time (see `orchestrator.check_alive`).
 """
 import json
 import os
@@ -45,26 +46,29 @@ def chrome_executable() -> str | None:
     return None
 
 
-def manual_login(client: str, platform: str, url: str, root: Path = PROFILES_ROOT):
-    """Launch the user's Chrome by hand (NO CDP/automation) on the profile dir.
+def _login_argv(exe: str, pdir: Path, urls: list[str]) -> list[str]:
+    """Chrome argv: exe, absolute shared-profile dir, then one tab per URL."""
+    return [exe, f"--user-data-dir={pdir.resolve()}", *urls]
 
-    Habr's and Dzen's login captcha (Yandex SmartCaptcha) renders a blank box in any
-    CDP-driven browser, so a normal manual login must use a plain Chrome process. Once
-    logged in, layout/is_alive reuse the profile via the standard open_context. Returns
-    the Popen so the caller can terminate it after login; passes an ABSOLUTE
-    user_data_dir (a relative one makes system Chrome fail to launch). Raises if Chrome
-    isn't installed.
+
+def manual_login(client: str, urls: list[str], root: Path = PROFILES_ROOT):
+    """Launch the user's plain Chrome (NO CDP) on the CLIENT's shared profile.
+
+    Opens a tab per URL so the user can log into every platform in one sitting.
+    Habr/Dzen SmartCaptcha renders blank under CDP, so login must use a plain Chrome
+    process; afterwards layout/status reuse the profile via open_context. Returns the
+    Popen so the caller can terminate it after login. Raises if Chrome isn't installed.
     """
     exe = chrome_executable()
     if not exe:
-        raise RuntimeError("Chrome not found — install Chrome to log in to this platform.")
-    pdir = profile_dir(client, platform, root)
+        raise RuntimeError("Chrome not found — install Chrome to log in.")
+    pdir = profile_dir(client, root)
     pdir.mkdir(parents=True, exist_ok=True)
-    return subprocess.Popen([exe, f"--user-data-dir={pdir.resolve()}", url])
+    return subprocess.Popen(_login_argv(exe, pdir, urls))
 
 
-def profile_dir(client: str, platform: str, root: Path = PROFILES_ROOT) -> Path:
-    return Path(root) / client / platform
+def profile_dir(client: str, root: Path = PROFILES_ROOT) -> Path:
+    return Path(root) / client
 
 
 def list_clients(root: Path = PROFILES_ROOT) -> list[str]:
@@ -74,29 +78,22 @@ def list_clients(root: Path = PROFILES_ROOT) -> list[str]:
     return sorted(p.name for p in root.iterdir() if p.is_dir())
 
 
-def list_accounts(client: str, root: Path = PROFILES_ROOT) -> list[str]:
-    client_dir = Path(root) / client
-    if not client_dir.exists():
-        return []
-    return sorted(p.name for p in client_dir.iterdir() if p.is_dir())
+def _meta_path(client: str, root: Path = PROFILES_ROOT) -> Path:
+    return profile_dir(client, root) / "meta.json"
 
 
-def _meta_path(client: str, platform: str, root: Path = PROFILES_ROOT) -> Path:
-    return profile_dir(client, platform, root) / "meta.json"
-
-
-def read_meta(client: str, platform: str, root: Path = PROFILES_ROOT) -> dict:
-    path = _meta_path(client, platform, root)
+def read_meta(client: str, root: Path = PROFILES_ROOT) -> dict:
+    path = _meta_path(client, root)
     if not path.exists():
         return {}
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def write_meta(client: str, platform: str, updates: dict, root: Path = PROFILES_ROOT) -> dict:
-    """Merge `updates` into the profile's meta.json (creating the dir) and return it."""
-    pdir = profile_dir(client, platform, root)
+def write_meta(client: str, updates: dict, root: Path = PROFILES_ROOT) -> dict:
+    """Merge `updates` into the client's meta.json (creating the dir) and return it."""
+    pdir = profile_dir(client, root)
     pdir.mkdir(parents=True, exist_ok=True)
-    meta = read_meta(client, platform, root)
+    meta = read_meta(client, root)
     meta.update(updates)
     (pdir / "meta.json").write_text(
         json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8"
@@ -119,30 +116,28 @@ PLATFORMS = {
     },
     "habr": {
         "build_document": habr_adapter.build_document,
-        # is_alive navigates here and waits for ALIVE_SEL (the navbar pencil,
-        # present only when logged in).
-        "editor_url": habr_adapter.HOME_URL,
+        # Liveness navigates to the new-article editor and waits for the editor body
+        # (ALIVE_SEL = BODY_SEL), which mounts only for a logged-in user.
+        "editor_url": habr_adapter.NEW_ARTICLE_URL,
         "alive_marker": habr_adapter.ALIVE_SEL,
-        # Login must use a non-CDP Chrome (captcha), so cmd_login launches Chrome
-        # by hand at this URL instead of the Playwright flow.
         "manual_login": True,
         "login_url": habr_adapter.LOGIN_URL,
     },
     "smartlab": {
         "build_document": smartlab_adapter.build_document,
-        # is_alive navigates here and waits for ALIVE_SEL (a logged-in-only
+        # Liveness navigates here and waits for ALIVE_SEL (a logged-in-only
         # element). Editor form only renders for an authenticated user.
         "editor_url": smartlab_adapter.ADD_URL,
         "alive_marker": smartlab_adapter.ALIVE_SEL,
     },
     "dzen": {
         "build_document": dzen_adapter.build_document,
-        # is_alive navigates here and waits for ALIVE_SEL (the studio "+", present only
+        # Liveness navigates here and waits for ALIVE_SEL (the studio "+", present only
         # when logged in). Editor opens from the studio for an authenticated user.
         "editor_url": dzen_adapter.STUDIO_URL,
         "alive_marker": dzen_adapter.ALIVE_SEL,
         # Login needs a non-CDP Chrome (Yandex SmartCaptcha), like Habr; afterwards
-        # layout/is_alive reuse the profile via the standard open_context.
+        # layout/status reuse the profile via the standard open_context.
         "manual_login": True,
         "login_url": dzen_adapter.STUDIO_URL,
     },
@@ -153,14 +148,15 @@ def known_platforms() -> list[str]:
     return sorted(PLATFORMS)
 
 
-def open_context(p, client: str, platform: str, headless: bool, root: Path = PROFILES_ROOT):
-    """Launch a persistent context on this profile and return (ctx, page).
+def open_context(p, client: str, headless: bool, root: Path = PROFILES_ROOT):
+    """Launch a persistent context on the CLIENT's shared profile; return (ctx, page).
 
-    Drives the installed Chrome (channel="chrome") with an ABSOLUTE user_data_dir,
-    the automation switch removed and navigator.webdriver masked. Falls back to
-    bundled Chromium only if Chrome isn't installed.
+    Drives installed Chrome (channel="chrome") on an ABSOLUTE user_data_dir, the
+    automation switch removed and navigator.webdriver masked. Falls back to bundled
+    Chromium only if Chrome isn't installed. The profile is shared by every platform —
+    different domains, so logins don't collide.
     """
-    pdir = profile_dir(client, platform, root)
+    pdir = profile_dir(client, root)
     pdir.mkdir(parents=True, exist_ok=True)
     kwargs = dict(
         user_data_dir=str(pdir.resolve()),
@@ -175,27 +171,3 @@ def open_context(p, client: str, platform: str, headless: bool, root: Path = PRO
     ctx.add_init_script(_MASK_WEBDRIVER)
     page = ctx.pages[0] if ctx.pages else ctx.new_page()
     return ctx, page
-
-
-def is_alive(client: str, platform: str, headless: bool = True,
-             timeout_ms: int = 8000, root: Path = PROFILES_ROOT) -> bool:
-    """Probe the live site: open the editor and look for the logged-in marker.
-
-    No cache — cookies can expire server-side at any time, so we always check.
-    A missing profile folder counts as dead (needs login).
-    """
-    from playwright.sync_api import sync_playwright
-
-    if not profile_dir(client, platform, root).exists():
-        return False
-    entry = PLATFORMS[platform]
-    with sync_playwright() as p:
-        ctx, page = open_context(p, client, platform, headless=headless, root=root)
-        try:
-            page.goto(entry["editor_url"], wait_until="domcontentloaded")
-            page.wait_for_selector(entry["alive_marker"], timeout=timeout_ms)
-            return True
-        except Exception:
-            return False
-        finally:
-            ctx.close()

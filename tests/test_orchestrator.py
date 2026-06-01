@@ -22,18 +22,25 @@ def test_parse_platforms_rejects_unknown():
     assert "telegram" in str(e.value)
 
 
-def test_precheck_all_alive_is_ok():
-    alive = lambda c, p: True
-    ok, dead = orchestrator.precheck("acme", ["vc", "pikabu"], alive)
-    assert ok is True
-    assert dead == []
+class _MarkerPage:
+    def __init__(self, found):
+        self.found = found
+
+    def wait_for_selector(self, marker, timeout):
+        if not self.found:
+            raise RuntimeError("missing")
 
 
-def test_precheck_one_dead_blocks_everything():
-    alive = lambda c, p: p != "pikabu"
-    ok, dead = orchestrator.precheck("acme", ["vc", "pikabu"], alive)
-    assert ok is False
-    assert dead == [("acme", "pikabu")]
+def test_check_alive_empty_when_all_found():
+    pages = {"vc": _MarkerPage(True), "pikabu": _MarkerPage(True)}
+    markers = {"vc": ".v", "pikabu": ".p"}
+    assert orchestrator.check_alive(pages, markers, timeout_ms=10) == []
+
+
+def test_check_alive_lists_dead_platforms_in_order():
+    pages = {"vc": _MarkerPage(True), "pikabu": _MarkerPage(False)}
+    markers = {"vc": ".v", "pikabu": ".p"}
+    assert orchestrator.check_alive(pages, markers, timeout_ms=10) == ["pikabu"]
 
 
 class _FakePage:
@@ -108,3 +115,17 @@ def test_wait_returns_only_after_every_window_closed():
 
     orchestrator.wait_until_all_closed([("vc", ctx_a), ("pikabu", ctx_b)], pump=pump)
     assert pumps["n"] == 2  # proves it did NOT return after only the first window closed
+
+
+def test_wait_pumps_a_live_page_when_first_tab_already_closed():
+    closed = _FakePage(closed=True)
+    live = _FakePage(closed=False)
+    ctx = _FakeCtx([closed, live])  # one context, two tabs; first already closed
+    pumped = []
+
+    def pump(pg):
+        pumped.append(pg)
+        live.closed = True  # user closes the remaining tab
+
+    orchestrator.wait_until_all_closed([("window", ctx)], pump=pump)
+    assert pumped == [live]  # never pumped the already-closed first tab

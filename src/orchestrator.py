@@ -1,11 +1,12 @@
 # src/orchestrator.py
 """Pure decision logic for the `layout` command — no browser here.
 
-`parse_platforms` validates the user's platform argument; `precheck` runs the
-all-or-nothing liveness gate. The CLI wires these to the real `is_alive` and to
-the browser; tests inject fakes.
+`parse_platforms` validates the user's platform argument; `check_alive` runs the
+all-or-nothing liveness gate over already-open pages (each page is navigated by
+the CLI; the gate just checks its logged-in marker); `wait_until_all_closed`
+blocks until the user closes every window. The CLI wires these to the browser;
+tests inject fakes.
 """
-from typing import Callable
 
 
 def parse_platforms(arg: str, known: list[str]) -> list[str]:
@@ -24,14 +25,20 @@ def parse_platforms(arg: str, known: list[str]) -> list[str]:
     return list(dict.fromkeys(requested))
 
 
-def precheck(client: str, platforms: list[str],
-             alive_fn: Callable[[str, str], bool]) -> tuple[bool, list[tuple[str, str]]]:
-    """Return (ok, dead) where dead is a list of (client, platform) tuples.
+def check_alive(pages_by_platform: dict, markers: dict, timeout_ms: int = 8000) -> list:
+    """Return the platforms whose logged-in marker did NOT appear, in iteration order.
 
-    ok is True only if EVERY requested session is alive (all-or-nothing).
+    `pages_by_platform` maps platform -> an already-navigated page; `markers` maps
+    platform -> its alive selector. All-or-nothing is the caller's call: proceed only
+    when the returned list is empty. Pure w.r.t. browser setup — pages are injected.
     """
-    dead = [(client, p) for p in platforms if not alive_fn(client, p)]
-    return (not dead, dead)
+    dead = []
+    for platform, page in pages_by_platform.items():
+        try:
+            page.wait_for_selector(markers[platform], timeout=timeout_ms)
+        except Exception:  # noqa: BLE001 — any failure = not logged in / not loaded
+            dead.append(platform)
+    return dead
 
 
 def wait_until_all_closed(contexts, pump):
@@ -42,6 +49,8 @@ def wait_until_all_closed(contexts, pump):
     events (in real use, `page.wait_for_timeout(...)`); it may raise if the page
     just closed — that is swallowed and the context re-evaluated as closed.
     `pump` MUST block (it is the loop's only throttle — there is no other sleep).
+    It pumps the first live page of the first live context, so a single
+    multi-tab window (several tabs in one context) is supported.
 
     This NEVER closes a window itself; it only waits for the user to do so.
     """
@@ -56,8 +65,8 @@ def wait_until_all_closed(contexts, pump):
         if not live:
             return
         try:
-            # Assumes one page per context (true today: each platform is its own
-            # window). If "tabs in one window" lands, pump the first LIVE page.
-            pump(live[0][1].pages[0])
+            ctx = live[0][1]
+            page = next(pg for pg in ctx.pages if not pg.is_closed())
+            pump(page)
         except Exception:  # noqa: BLE001 — window closed mid-pump; loop re-checks
             pass

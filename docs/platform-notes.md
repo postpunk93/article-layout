@@ -1,4 +1,17 @@
+> ## NON-NEGOTIABLE: this project NEVER publishes
+>
+> Every adapter stops at a built draft (plus the platform's own autosave where it
+> exists) and leaves the browser window open. The final "publish"/"submit" action is
+> ALWAYS performed by a human. Whatever we change in the pipeline, no publish button is
+> ever clicked by this code. If this rule ever changes, the user will say so separately
+> and explicitly.
+
 # Platform notes (VC + Pikabu + Habr + Smartlab)
+
+> **Profiles are per-client now.** Each client has ONE shared Chrome profile at
+> `.profiles/<client>/`, logged into every platform at once. `layout` opens that
+> profile in a single window with one tab per requested platform. (Older builds used
+> a separate `.profiles/<client>/<platform>/` profile per platform.)
 
 Consolidated, durable findings from the platform-discovery experiments (the one-off
 probe scripts that produced these have been removed; their history is in git). This

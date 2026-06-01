@@ -411,9 +411,15 @@ The body holds `[[IMG:file]]` markers. For each (matched BY FILENAME, top-to-bot
    whole Draft.js editor).
 3. `set_input_files` on the **single** (non-`multiple`) image input — PLupload inserts
    the figure at the cursor (the emptied marker block); no slash menu / file chooser.
-4. **Wait for the real CDN src** (`ic.pics.livejournal.com`) before continuing (async).
-5. Caption → the just-added figure's caption `textarea` (`.last`, since images upload in
-   document order). The marker clear leaves no stray blank block (no strip pass needed).
+4. **Wait for the real CDN src** (`ic.pics.livejournal.com`) before continuing (async),
+   then tag the new figure with its source filename (`data-lj-file`). The marker clear
+   leaves no stray blank block (no strip pass needed).
+
+**Captions go in a SECOND pass, after EVERY image is uploaded** — NOT inline. Uploading
+the next image RESETS the previous figure's caption `textarea` to empty (the figure
+element survives, only its value is wiped; read-back right after setting it looks fine,
+which is the trap). So once all uploads are done, fill each captioned figure's textarea
+(found by its `data-lj-file` tag) — no further upload will wipe it.
 
 ### Stop point — the autosaved draft, never publish
 This editor shows NO inline "saved" badge. The footer «Черновики» line gains

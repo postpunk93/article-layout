@@ -6,7 +6,7 @@
 > ever clicked by this code. If this rule ever changes, the user will say so separately
 > and explicitly.
 
-# Platform notes (VC + Pikabu + Habr + Smartlab)
+# Platform notes (VC + Pikabu + Habr + Smartlab + Dzen + LiveJournal)
 
 > **Profiles are per-client now.** Each client has ONE shared Chrome profile at
 > `.profiles/<client>/`, logged into every platform at once. `layout` opens that
@@ -359,6 +359,78 @@ confirm a `…/topic/autosave2/add/topic/` request as the saved signal, then STO
 ordered `cdx-list`, 11 `<b>` + 4 `<i>`; all 10 images uploaded to `…/uploads/…` with
 zero leftover `[[IMG]]` markers, captions set on the two captioned images, and the
 autosave POST observed. Nothing published.
+
+---
+
+## LiveJournal — Draft.js new post editor at `/post/` (like Dzen)
+
+LJ's new post editor (`https://www.livejournal.com/post/`) is **Draft.js** — the same
+engine as Dzen — so the body goes in as ONE real clipboard paste of clean HTML, and
+only images need a native-upload pass. The adapter (`src/lj_adapter.py`) mirrors the
+Dzen one.
+
+### Navigation & auth
+- New-post editor: `https://www.livejournal.com/post/` (body `.public-DraftEditor-content[contenteditable="true"]`).
+- Auth is an **ordinary login** — STANDARD `open_context` (like VC/Smartlab), NO
+  `manual_login`: the `default` profile drives fine under CDP. Add `manual_login` only
+  if a login-time captcha ever appears.
+- The Draft.js body mounts only for a logged-in user, so it doubles as the liveness marker.
+- On load a **restore-draft modal** ("Открыть последний черновик?") must be dismissed —
+  `text=Нет, спасибо` (fallback `[aria-label="Modal Window Close"]`).
+
+### Confirmed selectors / structure
+- **Title**: a plain `textarea.js--post-title` (placeholder «Придумайте заголовок»,
+  maxlength 100) — `page.fill()` it (simpler than Dzen's contenteditable title).
+- **Body**: `.public-DraftEditor-content[contenteditable="true"]`; blocks are
+  `[data-block="true"]`.
+- **Image inputs (PLupload)**: `input[type=file][accept*=".webp"]` — TWO share that
+  accept list (a `multiple` one and a single one). They exist at editor load.
+- **Image caption**: a native `textarea[class*="caption"]` (placeholder «Введите
+  описание картинки») under each figure.
+- **Publish (NEVER click)**: `button.js--toggle-submission-popup` («Настроить и опубликовать»).
+- **Slash quick-insert** (`/` or `js--add-panel-trigger`) offers native blocks
+  (Заголовок H2/H3, Цитата, Загрузить изображение, списки, …) — NOT needed by the adapter.
+
+### Body — ONE real clipboard paste (clean HTML)
+`emit_body(doc, caption_marker=False, quote_as_paragraph=False, img_sep=":")` then a
+real `Ctrl+V` (set the system clipboard via `navigator.clipboard.write` with text/html;
+`bring_to_front()` first — a real Ctrl+V only pastes into a FOCUSED tab). Verified: the
+full 72-block body survives in one paste; `<blockquote>` → native `<blockquote
+data-block="true">` quote block, `<ul>/<ol>` → native list-item blocks (no convert pass,
+unlike VC). The user's earlier manual-paste hang was raw heavy GDoc content, not our
+clean `emit_body` output.
+
+### Images — single PLupload input uploads at the cursor (marker → upload → native caption)
+The body holds `[[IMG:file]]` markers. For each (matched BY FILENAME, top-to-bottom):
+1. Locate the marker block, **verify the caret actually landed in it** (re-click until
+   `getSelection().anchorNode` is inside that block) BEFORE clearing — a blind
+   Home/Shift+End/Delete during a focus race (the caret can still be in the PREVIOUS
+   image's caption textarea) eats whichever block the caret is really in (observed: the
+   preceding paragraph losing its opening words).
+2. Clear the single-line marker (Home, Shift+End, Delete — NOT Ctrl+A, which selects the
+   whole Draft.js editor).
+3. `set_input_files` on the **single** (non-`multiple`) image input — PLupload inserts
+   the figure at the cursor (the emptied marker block); no slash menu / file chooser.
+4. **Wait for the real CDN src** (`ic.pics.livejournal.com`) before continuing (async).
+5. Caption → the just-added figure's caption `textarea` (`.last`, since images upload in
+   document order). The marker clear leaves no stray blank block (no strip pass needed).
+
+### Stop point — the autosaved draft, never publish
+This editor shows NO inline "saved" badge. The footer «Черновики» line gains
+**«(сохранен в ЧЧ:ММ:СС)»** when autosave completes. Two gotchas:
+- The URL gains `?draft=<draft-url>` right after the BODY paste — long before the images
+  finish — so it is NOT a safe stop signal.
+- The site renders that leading `с` as a **Latin `c`**, so match the ending
+  `охранен в <time>`.
+The adapter records the footer timestamp before the image edits and waits for it to
+ADVANCE, so the LATEST content is known saved. `js--toggle-submission-popup` is never clicked.
+
+### Validated end-to-end
+`cli.py layout lists-quotes default lj` (72 IR blocks, 1 quote, both lists, 10 images
+incl. 2 captioned): title set, body laid out (native quote + lists, bold/italic), all
+10 images uploaded to `ic.pics.livejournal.com` with zero leftover `[[IMG]]` markers,
+both captions set, preceding paragraphs intact, then stopped at the autosaved draft
+(`.../post/?draft=…`). Nothing published.
 
 ---
 

@@ -114,12 +114,10 @@ PLATFORMS = {
     },
     "habr": {
         "build_document": habr_adapter.build_document,
-        # is_alive navigates here and waits for ALIVE_SEL (the navbar pencil,
-        # present only when logged in).
-        "editor_url": habr_adapter.HOME_URL,
+        # Liveness navigates to the new-article editor and waits for the editor body
+        # (ALIVE_SEL = BODY_SEL), which mounts only for a logged-in user.
+        "editor_url": habr_adapter.NEW_ARTICLE_URL,
         "alive_marker": habr_adapter.ALIVE_SEL,
-        # Login must use a non-CDP Chrome (captcha), so cmd_login launches Chrome
-        # by hand at this URL instead of the Playwright flow.
         "manual_login": True,
         "login_url": habr_adapter.LOGIN_URL,
     },

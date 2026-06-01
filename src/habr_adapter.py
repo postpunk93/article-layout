@@ -38,9 +38,12 @@ NEW_ARTICLE_URL = "https://habr.com/ru/article/new/"
 # (sandbox or full); it renders only for a logged-in user, so it doubles as the
 # liveness marker.
 PENCIL_SEL = "a:has(svg.tm-header-user-menu__icon_write)"
-ALIVE_SEL = PENCIL_SEL
 
 BODY_SEL = ".tiptap.ProseMirror"
+# Liveness: the editor body only mounts for a logged-in user. The old navbar-pencil
+# selector broke when the pencil became a <button> popup, so we check the editor body
+# at the new-article URL instead (the same selector build_document waits for).
+ALIVE_SEL = BODY_SEL
 TITLE_SEL = ".tiptap .title"            # first node of the doc (<h1 class="title">)
 BODY_PARA_SEL = ".tiptap .node_paragraph"  # first body block (after the title node)
 SETTINGS_BUTTON_TEXT = "Далее к настройкам"

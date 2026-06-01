@@ -15,6 +15,26 @@ editor is expected to be ~identical to VC. The adapter therefore reuses VC's pro
 approach wholesale: one real clipboard paste for the body, then restore passes for
 strong/em, quotes, and images.
 
+## Recon findings (verified live, not assumed)
+
+Driven against the logged-in `default` profile via `recon_dtf.py` (scratch):
+
+- **Editor URL** confirmed: `https://dtf.ru/?modal=editor` (the `default` profile needed
+  a one-time DTF login — VC's session does NOT carry to dtf.ru; separate domain).
+- **Selectors identical to VC.** On the empty editor: `div.editor-tool-input[data-placeholder="Заголовок"]`,
+  `.codex-editor`, `.ce-block`, `.ce-toolbar__plus` each present. `CAPTION_SEL`
+  (`.editor-tool-input--text-sm`) and `QUOTE_BODY_SEL`
+  (`.editor-quote-tool .editor-tool-input--multiline`) are absent only because no image/
+  quote block exists yet — same as VC; they appear when those blocks are created. → No
+  selector divergence; `dtf_adapter` reuses VC's constants verbatim.
+- **Save status** confirmed: the footer cycles **«Сохранение» → «Сохранено»** after an
+  edit (matches the screenshot's «Сохранено ✓»). This is the correct stop signal.
+- **Premature `id=` confirmed:** typing just the title produced
+  `…&action=edit&id=5096504` in the URL immediately — before any images. So `id=` is NOT
+  a valid "saved" signal; wait for «Сохранено» instead.
+- **Login:** standard `open_context` (channel=chrome) drives DTF fine once logged in —
+  no `manual_login` needed (no captcha at the editor).
+
 ## Approach decision
 
 Considered three ways to share VC's logic:

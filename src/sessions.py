@@ -13,7 +13,7 @@ import os
 import subprocess
 from pathlib import Path
 
-from src import vc_adapter, pikabu_adapter, habr_adapter, smartlab_adapter, dzen_adapter, lj_adapter
+from src import vc_adapter, pikabu_adapter, habr_adapter, smartlab_adapter, dzen_adapter, lj_adapter, dtf_adapter
 
 PROFILES_ROOT = Path(".profiles")
 
@@ -107,6 +107,12 @@ PLATFORMS = {
         "editor_url": vc_adapter.EDITOR_URL,
         # The title field only renders inside the editor when logged in.
         "alive_marker": vc_adapter.TITLE_SEL,
+    },
+    "dtf": {
+        "build_document": dtf_adapter.build_document,
+        "editor_url": dtf_adapter.EDITOR_URL,
+        # Same Osnova editor as VC; the title field renders only when logged in.
+        "alive_marker": dtf_adapter.TITLE_SEL,
     },
     "pikabu": {
         "build_document": pikabu_adapter.build_document,

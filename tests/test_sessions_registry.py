@@ -3,7 +3,7 @@ from src import sessions
 
 
 def test_registry_has_all_platforms():
-    assert set(sessions.PLATFORMS) == {"vc", "pikabu", "habr", "smartlab", "dzen", "lj"}
+    assert set(sessions.PLATFORMS) == {"vc", "pikabu", "habr", "smartlab", "dzen", "lj", "dtf"}
 
 
 def test_each_platform_entry_is_complete():
@@ -14,7 +14,7 @@ def test_each_platform_entry_is_complete():
 
 
 def test_known_platforms_helper():
-    assert sessions.known_platforms() == ["dzen", "habr", "lj", "pikabu", "smartlab", "vc"]
+    assert sessions.known_platforms() == ["dtf", "dzen", "habr", "lj", "pikabu", "smartlab", "vc"]
 
 
 def test_habr_registered_with_contract():
@@ -53,3 +53,13 @@ def test_lj_registered_with_contract():
     # Standard CDP login (like VC/Smartlab) — no manual_login unless a captcha appears.
     assert "manual_login" not in entry
     assert "lj" in sessions.known_platforms()
+
+
+def test_dtf_registered_with_contract():
+    entry = sessions.PLATFORMS["dtf"]
+    assert callable(entry["build_document"])
+    assert entry["editor_url"].startswith("http")
+    assert entry["alive_marker"]
+    # Same Osnova engine as VC; standard CDP login, no manual_login.
+    assert "manual_login" not in entry
+    assert "dtf" in sessions.known_platforms()

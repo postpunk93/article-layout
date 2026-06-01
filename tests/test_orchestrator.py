@@ -115,3 +115,17 @@ def test_wait_returns_only_after_every_window_closed():
 
     orchestrator.wait_until_all_closed([("vc", ctx_a), ("pikabu", ctx_b)], pump=pump)
     assert pumps["n"] == 2  # proves it did NOT return after only the first window closed
+
+
+def test_wait_pumps_a_live_page_when_first_tab_already_closed():
+    closed = _FakePage(closed=True)
+    live = _FakePage(closed=False)
+    ctx = _FakeCtx([closed, live])  # one context, two tabs; first already closed
+    pumped = []
+
+    def pump(pg):
+        pumped.append(pg)
+        live.closed = True  # user closes the remaining tab
+
+    orchestrator.wait_until_all_closed([("window", ctx)], pump=pump)
+    assert pumped == [live]  # never pumped the already-closed first tab

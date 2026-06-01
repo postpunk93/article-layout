@@ -49,6 +49,8 @@ def wait_until_all_closed(contexts, pump):
     events (in real use, `page.wait_for_timeout(...)`); it may raise if the page
     just closed — that is swallowed and the context re-evaluated as closed.
     `pump` MUST block (it is the loop's only throttle — there is no other sleep).
+    It pumps the first live page of the first live context, so a single
+    multi-tab window (several tabs in one context) is supported.
 
     This NEVER closes a window itself; it only waits for the user to do so.
     """
@@ -63,8 +65,8 @@ def wait_until_all_closed(contexts, pump):
         if not live:
             return
         try:
-            # Assumes one page per context (true today: each platform is its own
-            # window). If "tabs in one window" lands, pump the first LIVE page.
-            pump(live[0][1].pages[0])
+            ctx = live[0][1]
+            page = next(pg for pg in ctx.pages if not pg.is_closed())
+            pump(page)
         except Exception:  # noqa: BLE001 — window closed mid-pump; loop re-checks
             pass

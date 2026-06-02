@@ -79,8 +79,10 @@ def cmd_layout(args):
     """
     try:
         platforms = orchestrator.parse_platforms(args.platforms, sessions.known_platforms())
-    except ValueError as e:
-        print(str(e))
+    except ValueError:
+        known = ", ".join(sessions.known_platforms())
+        print(f"Не понял площадки: {args.platforms!r}. Доступные: {known} (или слово all). "
+              f"Перечислите их через запятую, например: habr,vc,ruminlab")
         return 2
 
     slug_dir = Path("in") / args.slug

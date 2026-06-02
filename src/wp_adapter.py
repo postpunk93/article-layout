@@ -13,6 +13,7 @@ import time
 from pathlib import Path
 
 from src.emit_html import emit_body
+from src.ir import Image
 
 SITE = "https://ruminlab.ru"
 EDITOR_URL = f"{SITE}/wp-admin/post-new.php"
@@ -37,5 +38,135 @@ def body_html(doc, images_dir: Path) -> str:
     )
 
 
+def _set_clipboard(page, html):
+    """Put clean body HTML on the real clipboard (text/html + text/plain).
+
+    A real Ctrl+V of THIS clean html is what Gutenberg parses into one core block
+    per element. Requires clipboard-write permission (granted in build_document).
+    """
+    page.evaluate(
+        """async (html) => {
+            const plain = html.replace(/<[^>]+>/g, '');
+            await navigator.clipboard.write([new ClipboardItem({
+                'text/html': new Blob([html], {type: 'text/html'}),
+                'text/plain': new Blob([plain], {type: 'text/plain'}),
+            })]);
+        }""",
+        html,
+    )
+
+
+# Editor is ready when the block-editor store is up (logged in AND editor loaded).
+# wp.data lives on the TOP window regardless of the iframed canvas.
+_EDITOR_READY = ("() => !!(window.wp && wp.data && wp.data.select('core/block-editor')"
+                 " && wp.data.select('core/block-editor').getBlocks)")
+
+_SET_TITLE = "(t) => wp.data.dispatch('core/editor').editPost({title: t})"
+
+# Ensure a first empty paragraph block exists and return its clientId, so we can
+# focus the BODY (not the title) for the paste. Pasting into the title swallows the
+# first body block (observed in recon).
+_FIRST_BODY_CLIENT_ID = r"""
+() => {
+  const sel = wp.data.select('core/block-editor');
+  const dispatch = wp.data.dispatch('core/block-editor');
+  const blocks = sel.getBlocks();
+  if (blocks.length) return blocks[0].clientId;
+  const b = wp.blocks.createBlock('core/paragraph');
+  dispatch.insertBlocks(b);
+  return b.clientId;
+}
+"""
+
+# All core/image blocks have a real http(s) url (WP finished sideloading them).
+_IMAGES_SETTLED = r"""
+() => {
+  const imgs = wp.data.select('core/block-editor').getBlocks()
+      .filter(b => b.name === 'core/image');
+  return imgs.length === 0 || imgs.every(b => /^https?:/.test(b.attributes.url || ''));
+}
+"""
+
+# Move each [[CAP:text]] paragraph that immediately follows a core/image into that
+# image's native caption, then remove the marker paragraph. Returns the count set.
+_APPLY_CAPTIONS = r"""
+() => {
+  const sel = wp.data.select('core/block-editor');
+  const dispatch = wp.data.dispatch('core/block-editor');
+  const blocks = sel.getBlocks();
+  const text = a => (typeof a.content === 'string') ? a.content
+                  : (a.content && a.content.text) ? a.content.text : '';
+  let n = 0;
+  for (let i = 0; i < blocks.length - 1; i++) {
+    if (blocks[i].name !== 'core/image') continue;
+    const next = blocks[i + 1];
+    if (next.name !== 'core/paragraph') continue;
+    const m = text(next.attributes).match(/^\s*\[\[CAP:([\s\S]*)\]\]\s*$/);
+    if (!m) continue;
+    dispatch.updateBlockAttributes(blocks[i].clientId, {caption: m[1]});
+    dispatch.removeBlock(next.clientId);
+    n++;
+  }
+  return n;
+}
+"""
+
+_SAVE_DRAFT = "() => wp.data.dispatch('core/editor').savePost()"
+
+# Saved as a draft: not currently saving AND status is 'draft'.
+_DRAFT_SAVED = r"""
+() => {
+  const s = wp.data.select('core/editor');
+  return !s.isSavingPost() && s.getCurrentPost().status === 'draft';
+}
+"""
+
+
 def build_document(page, doc, images_dir: Path, log=print):
-    raise NotImplementedError  # implemented in Task 3
+    log(f"Opening editor: {EDITOR_URL}")
+    page.context.grant_permissions(["clipboard-read", "clipboard-write"])
+    page.goto(EDITOR_URL, wait_until="domcontentloaded")
+    page.wait_for_function(_EDITOR_READY, timeout=30000)
+    time.sleep(1)
+
+    # 1. Title via wp.data (pasting into the title field would swallow the first block).
+    log(f"Title: {doc.title!r}")
+    page.evaluate(_SET_TITLE, doc.title)
+
+    # 2. Body in ONE real Ctrl+V into the first body block (inside the canvas iframe).
+    html = body_html(doc, images_dir)
+    _set_clipboard(page, html)
+    client_id = page.evaluate(_FIRST_BODY_CLIENT_ID)
+    page.frame_locator(CANVAS_SEL).locator(
+        f'[data-block="{client_id}"] [contenteditable="true"]').first.click()
+    log("Pasting body via real clipboard…")
+    page.keyboard.press("Control+V")
+    time.sleep(1)
+    n_blocks = page.evaluate(
+        "() => wp.data.select('core/block-editor').getBlocks().length")
+    log(f"Pasted; {n_blocks} top-level block(s).")
+
+    # 3. Wait for WP to sideload pasted data-URI images into the media library.
+    n_images = sum(1 for b in doc.blocks if isinstance(b, Image))
+    if n_images:
+        log(f"Waiting for {n_images} image(s) to sideload to the media library…")
+        try:
+            page.wait_for_function(_IMAGES_SETTLED, timeout=120000)
+        except Exception as e:  # noqa: BLE001 — best-effort, report and continue
+            log(f"  image sideload wait timed out ({str(e)[:80]})")
+
+    # 4. Move [[CAP:]] marker paragraphs into native image captions.
+    try:
+        n_caps = page.evaluate(_APPLY_CAPTIONS)
+        log(f"Captions applied: {n_caps}")
+    except Exception as e:  # noqa: BLE001
+        log(f"  caption pass failed ({str(e)[:80]})")
+
+    # 5. Save as a draft. NEVER publishes.
+    log("Saving draft…")
+    page.evaluate(_SAVE_DRAFT)
+    try:
+        page.wait_for_function(_DRAFT_SAVED, timeout=30000)
+        log(f"Draft saved (status=draft): {page.url}")
+    except Exception:  # noqa: BLE001
+        log(f"WARNING: did not confirm draft saved; current: {page.url}")

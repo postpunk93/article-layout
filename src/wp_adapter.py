@@ -141,7 +141,10 @@ def build_document(page, doc, images_dir: Path, log=print):
     # insertBlocks updates the store synchronously but the iframe React-renders the
     # block async; the Playwright locator auto-waits for it before clicking. A failed
     # focus here means a bad paste, so it is intentionally NOT wrapped in try/except.
+    # A paragraph block's editable IS the [data-block] element itself (not a child),
+    # so match the element OR a nested editable (other block types nest it).
     page.frame_locator(CANVAS_SEL).locator(
+        f'[data-block="{client_id}"][contenteditable="true"], '
         f'[data-block="{client_id}"] [contenteditable="true"]').first.click()
     log("Pasting body via real clipboard…")
     page.keyboard.press("Control+V")

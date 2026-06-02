@@ -1,7 +1,7 @@
 # WordPress / Gutenberg adapter (ruminlab.ru) — design
 
 **Date:** 2026-06-02
-**Status:** designed (recon-validated), pending implementation
+**Status:** implemented; e2e-validated on in/synthetic
 **Branch:** `feat/wp-adapter`
 
 ## Goal

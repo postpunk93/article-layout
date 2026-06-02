@@ -6,7 +6,7 @@
 > ever clicked by this code. If this rule ever changes, the user will say so separately
 > and explicitly.
 
-# Platform notes (VC + Pikabu + Habr + Smartlab + Dzen + LiveJournal)
+# Platform notes (VC + Pikabu + Habr + Smartlab + Dzen + LiveJournal + WordPress)
 
 > **Profiles are per-client now.** Each client has ONE shared Chrome profile at
 > `.profiles/<client>/`, logged into every platform at once. `layout` opens that
@@ -437,6 +437,54 @@ incl. 2 captioned): title set, body laid out (native quote + lists, bold/italic)
 10 images uploaded to `ic.pics.livejournal.com` with zero leftover `[[IMG]]` markers,
 both captions set, preceding paragraphs intact, then stopped at the autosaved draft
 (`.../post/?draft=…`). Nothing published.
+
+---
+
+## WordPress / Gutenberg — block editor at `/wp-admin/post-new.php` (ruminlab.ru)
+
+Our own site. The Gutenberg editor's body is a block model rendered inside an
+**iframe** (`iframe[name="editor-canvas"]`), but the **`wp.data` store lives on the
+TOP window** — so we set the title, fix captions, and save the draft via `wp.data`
+and touch the iframe only for the single body paste. Adapter: `src/wp_adapter.py`.
+
+### Navigation & auth
+- New-post editor: `https://ruminlab.ru/wp-admin/post-new.php`.
+- Auth is an **ordinary login/password** — STANDARD `open_context` (like VC/LJ), NO
+  `manual_login` (no captcha under CDP). `python cli.py login <client>` (log into the
+  ruminlab.ru/wp-admin tab).
+- Liveness marker: `.editor-document-tools__inserter-toggle` (top-window inserter
+  toggle, present only when the editor loads = logged in).
+
+### Body — ONE real clipboard paste (clean HTML)
+`emit_body(doc, quote_as_paragraph=False, caption_marker=True, img_sep=" ",
+image_src=<data-URI>)` then a real `Ctrl+V` into the FIRST body block. Gutenberg's
+paste maps cleanly to native core blocks — verified via
+`wp.data.select('core/block-editor').getBlocks()`:
+`<h2>/<h3>` → `core/heading` (correct `level`); `<ul>/<ol>` → `core/list`
+(+`core/list-item`); `<blockquote>` → `core/quote` (NO convert pass, unlike VC/Habr);
+`<strong>/<em>` survive inline.
+> **Set the title via `wp.data`, paste into the BODY.** Pasting while the caret is in
+> the title field swallows the first body block into the title (observed in recon).
+> Set `wp.data.dispatch('core/editor').editPost({title})`, then focus the first body
+> block by its `clientId` (`[data-block="<id>"] [contenteditable]` inside the canvas
+> frame) before `Ctrl+V`.
+
+### Images — data-URI paste, WP auto-sideloads (no file chooser, no markers)
+Emit each local image as `<img src="data:…base64…">`. On paste WP **sideloads** it
+into the **media library**: the resulting `core/image` gets a real attachment `id`
+and its `url` flips from `data:` to `https://ruminlab.ru/wp-content/uploads/…`.
+**Wait for every `core/image` `url` to be `http(s)`** before continuing (async).
+
+### Captions — `[[CAP:]]` marker → native caption (wp.data cleanup pass)
+Paste does NOT attach captions: each `[[CAP:text]]` marker lands as its own paragraph
+after the image. After the images settle, run one `wp.data` pass: for each
+`core/image` immediately followed by a `[[CAP:…]]` paragraph,
+`updateBlockAttributes(image,{caption})` + `removeBlock(markerParagraph)` (decode HTML
+entities in the marker text first).
+
+### Stop point — saved draft, never publish
+`wp.data.dispatch('core/editor').savePost()`, then wait for `!isSavingPost()` and
+`getCurrentPost().status === 'draft'`. "Опубликовать" is never clicked.
 
 ---
 

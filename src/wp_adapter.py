@@ -96,6 +96,7 @@ _APPLY_CAPTIONS = r"""
   const blocks = sel.getBlocks();
   const text = a => (typeof a.content === 'string') ? a.content
                   : (a.content && a.content.text) ? a.content.text : '';
+  const decode = s => { const t = document.createElement('textarea'); t.innerHTML = s; return t.value; };
   let n = 0;
   for (let i = 0; i < blocks.length - 1; i++) {
     if (blocks[i].name !== 'core/image') continue;
@@ -103,7 +104,7 @@ _APPLY_CAPTIONS = r"""
     if (next.name !== 'core/paragraph') continue;
     const m = text(next.attributes).match(/^\s*\[\[CAP:([\s\S]*)\]\]\s*$/);
     if (!m) continue;
-    dispatch.updateBlockAttributes(blocks[i].clientId, {caption: m[1]});
+    dispatch.updateBlockAttributes(blocks[i].clientId, {caption: decode(m[1])});
     dispatch.removeBlock(next.clientId);
     n++;
   }
@@ -137,11 +138,22 @@ def build_document(page, doc, images_dir: Path, log=print):
     html = body_html(doc, images_dir)
     _set_clipboard(page, html)
     client_id = page.evaluate(_FIRST_BODY_CLIENT_ID)
+    # insertBlocks updates the store synchronously but the iframe React-renders the
+    # block async; the Playwright locator auto-waits for it before clicking. A failed
+    # focus here means a bad paste, so it is intentionally NOT wrapped in try/except.
     page.frame_locator(CANVAS_SEL).locator(
         f'[data-block="{client_id}"] [contenteditable="true"]').first.click()
     log("Pasting body via real clipboard…")
     page.keyboard.press("Control+V")
-    time.sleep(1)
+    # Gutenberg parses the paste asynchronously; wait for the blocks to materialize
+    # instead of a fixed sleep (mirrors vc_adapter). [[CAP:]] markers add paragraphs,
+    # so the top-level count is always >= the IR block count.
+    try:
+        page.wait_for_function(
+            "(n) => wp.data.select('core/block-editor').getBlocks().length >= n",
+            arg=len(doc.blocks), timeout=15000)
+    except Exception:  # noqa: BLE001 — fall through; later steps are best-effort
+        pass
     n_blocks = page.evaluate(
         "() => wp.data.select('core/block-editor').getBlocks().length")
     log(f"Pasted; {n_blocks} top-level block(s).")
@@ -169,4 +181,7 @@ def build_document(page, doc, images_dir: Path, log=print):
         page.wait_for_function(_DRAFT_SAVED, timeout=30000)
         log(f"Draft saved (status=draft): {page.url}")
     except Exception:  # noqa: BLE001
-        log(f"WARNING: did not confirm draft saved; current: {page.url}")
+        status = page.evaluate(
+            "() => { try { return wp.data.select('core/editor')"
+            ".getCurrentPost().status; } catch (e) { return '?'; } }")
+        log(f"WARNING: did not confirm draft saved (status={status}); current: {page.url}")

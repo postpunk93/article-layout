@@ -14,7 +14,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from src import vc_adapter, pikabu_adapter, habr_adapter, smartlab_adapter, dzen_adapter, lj_adapter, dtf_adapter, wp_adapter
+from src.adapters import vc, pikabu, habr, smartlab, dzen, lj, dtf, wp
 
 PROFILES_ROOT = Path(".profiles")
 
@@ -117,64 +117,64 @@ def write_meta(client: str, updates: dict, root: Path = PROFILES_ROOT) -> dict:
 
 PLATFORMS = {
     "vc": {
-        "build_document": vc_adapter.build_document,
-        "editor_url": vc_adapter.EDITOR_URL,
+        "build_document": vc.build_document,
+        "editor_url": vc.EDITOR_URL,
         # The title field only renders inside the editor when logged in.
-        "alive_marker": vc_adapter.TITLE_SEL,
+        "alive_marker": vc.TITLE_SEL,
     },
     "dtf": {
-        "build_document": dtf_adapter.build_document,
-        "editor_url": dtf_adapter.EDITOR_URL,
+        "build_document": dtf.build_document,
+        "editor_url": dtf.EDITOR_URL,
         # Same Osnova editor as VC; the title field renders only when logged in.
-        "alive_marker": dtf_adapter.TITLE_SEL,
+        "alive_marker": dtf.TITLE_SEL,
     },
     "pikabu": {
-        "build_document": pikabu_adapter.build_document,
-        "editor_url": pikabu_adapter.ADD_URL,
+        "build_document": pikabu.build_document,
+        "editor_url": pikabu.ADD_URL,
         # The Tiptap editor body only mounts for a logged-in user.
-        "alive_marker": pikabu_adapter.BODY_SEL,
+        "alive_marker": pikabu.BODY_SEL,
     },
     "habr": {
-        "build_document": habr_adapter.build_document,
+        "build_document": habr.build_document,
         # Liveness navigates to the new-article editor and waits for the editor body
         # (ALIVE_SEL = BODY_SEL), which mounts only for a logged-in user.
-        "editor_url": habr_adapter.NEW_ARTICLE_URL,
-        "alive_marker": habr_adapter.ALIVE_SEL,
+        "editor_url": habr.NEW_ARTICLE_URL,
+        "alive_marker": habr.ALIVE_SEL,
         "manual_login": True,
-        "login_url": habr_adapter.LOGIN_URL,
+        "login_url": habr.LOGIN_URL,
     },
     "smartlab": {
-        "build_document": smartlab_adapter.build_document,
+        "build_document": smartlab.build_document,
         # Liveness navigates here and waits for ALIVE_SEL (a logged-in-only
         # element). Editor form only renders for an authenticated user.
-        "editor_url": smartlab_adapter.ADD_URL,
-        "alive_marker": smartlab_adapter.ALIVE_SEL,
+        "editor_url": smartlab.ADD_URL,
+        "alive_marker": smartlab.ALIVE_SEL,
     },
     "dzen": {
-        "build_document": dzen_adapter.build_document,
+        "build_document": dzen.build_document,
         # Liveness navigates here and waits for ALIVE_SEL (the studio "+", present only
         # when logged in). Editor opens from the studio for an authenticated user.
-        "editor_url": dzen_adapter.STUDIO_URL,
-        "alive_marker": dzen_adapter.ALIVE_SEL,
+        "editor_url": dzen.STUDIO_URL,
+        "alive_marker": dzen.ALIVE_SEL,
         # Login needs a non-CDP Chrome (Yandex SmartCaptcha), like Habr; afterwards
         # layout/status reuse the profile via the standard open_context.
         "manual_login": True,
-        "login_url": dzen_adapter.STUDIO_URL,
+        "login_url": dzen.STUDIO_URL,
     },
     "lj": {
-        "build_document": lj_adapter.build_document,
+        "build_document": lj.build_document,
         # Liveness navigates here and waits for ALIVE_SEL (the Draft.js body, present
         # only when logged in). Standard open_context login (like VC/Smartlab) — the
         # default profile drives fine under CDP, no manual_login needed.
-        "editor_url": lj_adapter.POST_URL,
-        "alive_marker": lj_adapter.ALIVE_SEL,
+        "editor_url": lj.POST_URL,
+        "alive_marker": lj.ALIVE_SEL,
     },
     "ruminlab": {
-        "build_document": wp_adapter.build_document,
+        "build_document": wp.build_document,
         # Liveness navigates here and waits for ALIVE_SEL (the editor inserter toggle,
         # a top-window element present only when the Gutenberg editor loads = logged in).
-        "editor_url": wp_adapter.EDITOR_URL,
-        "alive_marker": wp_adapter.ALIVE_SEL,
+        "editor_url": wp.EDITOR_URL,
+        "alive_marker": wp.ALIVE_SEL,
         # Plain WordPress login/password — standard open_context (like VC/LJ), no captcha.
     },
 }

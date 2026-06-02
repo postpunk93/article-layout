@@ -1,7 +1,7 @@
 # tests/test_wp_adapter.py
 from pathlib import Path
 
-from src import wp_adapter
+from src.adapters import wp
 from src.ir import Document, Heading, Paragraph, Quote, Image, ListBlock, ListItem, Run
 
 
@@ -14,7 +14,7 @@ def test_body_html_emits_native_blocks_data_uri_images_and_caption_markers():
         Quote(runs=[Run("quoted")]),
         Image(file="image1.png", caption=[Run("cap one")]),
     ])
-    html = wp_adapter.body_html(doc, images_dir)
+    html = wp.body_html(doc, images_dir)
 
     # Native Gutenberg-friendly structure (paste maps these to core blocks).
     assert "<h2>Head</h2>" in html
@@ -28,5 +28,5 @@ def test_body_html_emits_native_blocks_data_uri_images_and_caption_markers():
 
 
 def test_constants_point_at_ruminlab():
-    assert wp_adapter.EDITOR_URL == "https://ruminlab.ru/wp-admin/post-new.php"
-    assert wp_adapter.ALIVE_SEL == ".editor-document-tools__inserter-toggle"
+    assert wp.EDITOR_URL == "https://ruminlab.ru/wp-admin/post-new.php"
+    assert wp.ALIVE_SEL == ".editor-document-tools__inserter-toggle"

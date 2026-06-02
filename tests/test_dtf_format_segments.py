@@ -1,5 +1,5 @@
 from src.ir import Run
-from src.dtf_adapter import format_segments
+from src.adapters.dtf import format_segments
 
 
 def test_no_formatting_returns_empty():

@@ -31,26 +31,26 @@ def cmd_login(args):
         entry = sessions.PLATFORMS[platform]
         urls.append(entry.get("login_url", entry["editor_url"]))
     proc = sessions.manual_login(args.client, urls)
-    print(f"Chrome open for {args.client} with a tab per platform. Log in to the ones "
-          f"you need, then come back here.")
+    print(f"Открыл окно Chrome для клиента «{args.client}»: по вкладке на каждую площадку. "
+          f"Войдите в те площадки, что вам нужны, затем вернитесь сюда, в терминал.")
     try:
-        input("Press Enter once you're logged in to save the session...")
+        input("Когда войдёте на нужные площадки, нажмите Enter здесь, чтобы сохранить сессию...")
     except EOFError:
         time.sleep(120)
     proc.terminate()
     sessions.write_meta(args.client, {"last_login_at": _today()})
-    print(f"Saved session for {args.client}.")
+    print(f"Сессия для клиента «{args.client}» сохранена.")
     return 0
 
 
 def cmd_status(args):
     clients = [args.client] if args.client else sessions.list_clients()
     if not clients:
-        print("No profiles yet. Use: python cli.py login <client>")
+        print("Пока нет ни одного клиента. Создайте его командой: ! python cli.py login <клиент>")
         return 0
     platforms = sessions.known_platforms()
     markers = {p: sessions.PLATFORMS[p]["alive_marker"] for p in platforms}
-    print(f"{'client':<16}{'platform':<10}{'state':<8}label")
+    print(f"{'клиент':<16}{'площадка':<10}{'статус':<8}метка")
     with sync_playwright() as p:
         for client in clients:
             label = sessions.read_meta(client).get("label", "")
@@ -66,7 +66,7 @@ def cmd_status(args):
             finally:
                 ctx.close()
             for platform in platforms:
-                state = "DEAD" if platform in dead else "alive"
+                state = "мёртв" if platform in dead else "жив"
                 print(f"{client:<16}{platform:<10}{state:<8}{label}")
     return 0
 
@@ -86,11 +86,12 @@ def cmd_layout(args):
     slug_dir = Path("in") / args.slug
     index = slug_dir / "index.html"
     if not index.exists():
-        print(f"Not found: {index}")
+        print(f"Статья не найдена: {index}. Проверьте, что файлы лежат в папке in/{args.slug}/ "
+              f"(внутри должен быть index.html).")
         return 1
     doc = parse(index.read_text(encoding="utf-8"))
     images_dir = slug_dir / "images"
-    print(f"Parsed: title={doc.title!r}, blocks={len(doc.blocks)}")
+    print(f"Статья разобрана: заголовок={doc.title!r}, блоков={len(doc.blocks)}.")
 
     markers = {p: sessions.PLATFORMS[p]["alive_marker"] for p in platforms}
     failures = []
@@ -99,7 +100,7 @@ def cmd_layout(args):
 
         # Liveness phase (all-or-nothing): one tab per platform, navigate, check marker.
         # Reuse the profile's initial tab for the first platform so no blank tab lingers.
-        print(f"Checking sessions for {args.client}: {', '.join(platforms)} ...")
+        print(f"Проверяю сессии клиента «{args.client}»: {', '.join(platforms)} ...")
         pages = {}
         for i, platform in enumerate(platforms):
             page = first_page if i == 0 else ctx.new_page()
@@ -112,8 +113,10 @@ def cmd_layout(args):
         dead = orchestrator.check_alive(pages, markers)
         if dead:
             for platform in dead:
-                print(f"DEAD: {args.client}/{platform} — run: python cli.py login {args.client}")
-            print("Laid out nothing (all-or-nothing). Log in, then retry.")
+                print(f"Сессия мертва: {args.client}/{platform}. Залогиньтесь заново командой: "
+                      f"! python cli.py login {args.client}")
+            print("Ничего не сверстал — действует правило «всё или ничего». "
+                  "Войдите в нужные площадки и запустите снова.")
             ctx.close()
             return 1
 
@@ -123,20 +126,21 @@ def cmd_layout(args):
             print(f"--- {args.client}/{platform} ---")
             try:
                 sessions.PLATFORMS[platform]["build_document"](pages[platform], doc, images_dir)
-                print(f"Done — {platform} draft built. Review and publish manually.")
+                print(f"Готово — черновик на площадке {platform} собран. "
+                      f"Проверьте и опубликуйте вручную.")
             except Exception as e:  # noqa: BLE001 — report and continue to next platform
                 failures.append((platform, repr(e)))
-                print(f"FAILED {platform}: {e!r} (tab left open)")
+                print(f"Ошибка на площадке {platform}: {e!r} (вкладка оставлена открытой).")
 
         print(
-            f"\nAll {len(platforms)} tab(s) open in one window. Review and publish "
-            "manually. Nothing closes on its own — close the window yourself when done "
-            "(Ctrl+C also exits)."
+            f"\nВсе вкладки ({len(platforms)} шт.) открыты в одном окне. "
+            "Проверьте черновики и опубликуйте вручную. Само ничего не закроется — "
+            "закройте окно сами, когда закончите (выйти можно и через Ctrl+C)."
         )
         orchestrator.wait_until_all_closed(contexts, pump=lambda pg: pg.wait_for_timeout(500))
 
     if failures:
-        print("Failures: " + ", ".join(f"{p}: {err}" for p, err in failures))
+        print("Ошибки: " + ", ".join(f"{p}: {err}" for p, err in failures))
         return 1
     return 0
 

@@ -3,7 +3,8 @@ from src import sessions
 
 
 def test_registry_has_all_platforms():
-    assert set(sessions.PLATFORMS) == {"vc", "pikabu", "habr", "smartlab", "dzen", "lj", "dtf"}
+    assert set(sessions.PLATFORMS) == {
+        "vc", "pikabu", "habr", "smartlab", "dzen", "lj", "dtf", "ruminlab"}
 
 
 def test_each_platform_entry_is_complete():
@@ -14,7 +15,8 @@ def test_each_platform_entry_is_complete():
 
 
 def test_known_platforms_helper():
-    assert sessions.known_platforms() == ["dtf", "dzen", "habr", "lj", "pikabu", "smartlab", "vc"]
+    assert sessions.known_platforms() == [
+        "dtf", "dzen", "habr", "lj", "pikabu", "ruminlab", "smartlab", "vc"]
 
 
 def test_habr_registered_with_contract():
@@ -63,3 +65,13 @@ def test_dtf_registered_with_contract():
     # Same Osnova engine as VC; standard CDP login, no manual_login.
     assert "manual_login" not in entry
     assert "dtf" in sessions.known_platforms()
+
+
+def test_ruminlab_registered_with_contract():
+    entry = sessions.PLATFORMS["ruminlab"]
+    assert callable(entry["build_document"])
+    assert entry["editor_url"].startswith("http")
+    assert entry["alive_marker"]
+    # Plain WordPress login/password — standard CDP login (like VC/LJ), no manual_login.
+    assert "manual_login" not in entry
+    assert "ruminlab" in sessions.known_platforms()

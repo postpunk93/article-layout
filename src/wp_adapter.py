@@ -35,3 +35,7 @@ def body_html(doc, images_dir: Path) -> str:
         doc, quote_as_paragraph=False, caption_marker=True, img_sep=" ",
         image_src=lambda f: _data_uri(images_dir / f),
     )
+
+
+def build_document(page, doc, images_dir: Path, log=print):
+    raise NotImplementedError  # implemented in Task 3

@@ -13,7 +13,7 @@ import os
 import subprocess
 from pathlib import Path
 
-from src import vc_adapter, pikabu_adapter, habr_adapter, smartlab_adapter, dzen_adapter, lj_adapter, dtf_adapter
+from src import vc_adapter, pikabu_adapter, habr_adapter, smartlab_adapter, dzen_adapter, lj_adapter, dtf_adapter, wp_adapter
 
 PROFILES_ROOT = Path(".profiles")
 
@@ -154,6 +154,14 @@ PLATFORMS = {
         # default profile drives fine under CDP, no manual_login needed.
         "editor_url": lj_adapter.POST_URL,
         "alive_marker": lj_adapter.ALIVE_SEL,
+    },
+    "ruminlab": {
+        "build_document": wp_adapter.build_document,
+        # Liveness navigates here and waits for ALIVE_SEL (the editor inserter toggle,
+        # a top-window element present only when the Gutenberg editor loads = logged in).
+        "editor_url": wp_adapter.EDITOR_URL,
+        "alive_marker": wp_adapter.ALIVE_SEL,
+        # Plain WordPress login/password — standard open_context (like VC/LJ), no captcha.
     },
 }
 

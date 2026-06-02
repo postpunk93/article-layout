@@ -8,3 +8,4 @@ __pycache__/
 .profiles/
 .pytest_cache/
 discovery/
+recon/

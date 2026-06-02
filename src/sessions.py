@@ -11,6 +11,7 @@ re-checked against the live site every time (see `orchestrator.check_alive`).
 import json
 import os
 import subprocess
+import sys
 from pathlib import Path
 
 from src import vc_adapter, pikabu_adapter, habr_adapter, smartlab_adapter, dzen_adapter, lj_adapter, dtf_adapter, wp_adapter
@@ -25,11 +26,24 @@ PROFILES_ROOT = Path(".profiles")
 # an absolute path (see open_context).
 _ANTI_AUTOMATION_ARGS = ["--start-maximized", "--disable-blink-features=AutomationControlled"]
 _MASK_WEBDRIVER = "Object.defineProperty(navigator,'webdriver',{get:()=>undefined});"
-_CHROME_CANDIDATES = [
-    Path(os.environ.get("PROGRAMFILES", r"C:\Program Files")) / "Google/Chrome/Application/chrome.exe",
-    Path(os.environ.get("PROGRAMFILES(X86)", r"C:\Program Files (x86)")) / "Google/Chrome/Application/chrome.exe",
-    Path(os.environ.get("LOCALAPPDATA", "")) / "Google/Chrome/Application/chrome.exe",
-]
+def _chrome_candidates() -> list[Path]:
+    """Likely paths to the installed Chrome for the current OS.
+
+    Only gates "is Chrome installed" — open_context resolves Chrome itself via
+    Playwright channel="chrome". Keep ALL OS knowledge here; adapters stay OS-blind.
+    """
+    if sys.platform == "darwin":
+        return [
+            Path("/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"),
+            Path.home() / "Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+        ]
+    if sys.platform.startswith("win"):
+        return [
+            Path(os.environ.get("PROGRAMFILES", r"C:\Program Files")) / "Google/Chrome/Application/chrome.exe",
+            Path(os.environ.get("PROGRAMFILES(X86)", r"C:\Program Files (x86)")) / "Google/Chrome/Application/chrome.exe",
+            Path(os.environ.get("LOCALAPPDATA", "")) / "Google/Chrome/Application/chrome.exe",
+        ]
+    return [Path("/usr/bin/google-chrome"), Path("/usr/bin/google-chrome-stable")]
 
 
 def chrome_executable() -> str | None:
@@ -40,7 +54,7 @@ def chrome_executable() -> str | None:
     only gates that on/off. The two paths could in principle disagree if Chrome is
     installed somewhere off the candidate list — unlikely for a standard install.
     """
-    for path in _CHROME_CANDIDATES:
+    for path in _chrome_candidates():
         if str(path) and path.exists():
             return str(path)
     return None

@@ -1,0 +1,17 @@
+# Identical checkout on Win and Mac: normalise to LF in the repo.
+* text=auto eol=lf
+
+# OS-native line endings for OS-specific scripts.
+*.ps1   text eol=crlf
+*.bat   text eol=crlf
+*.cmd   text eol=crlf
+*.command text eol=lf
+*.sh    text eol=lf
+
+# Binary assets — never touch.
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.ico   binary
+*.pdf   binary

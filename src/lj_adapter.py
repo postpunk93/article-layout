@@ -75,7 +75,7 @@ def _set_title_and_body(page, doc, log):
     _set_clipboard(page, html)
     page.click(BODY_SEL)
     page.wait_for_timeout(300)
-    page.keyboard.press("Control+V")
+    page.keyboard.press("ControlOrMeta+V")
     page.wait_for_timeout(1500)
     log("Body pasted.")
 

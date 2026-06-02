@@ -49,14 +49,14 @@ def _type_runs(page, runs):
     """Type runs, toggling bold/italic via Ctrl+B / Ctrl+I per run."""
     for r in runs:
         if r.bold:
-            page.keyboard.press("Control+b")
+            page.keyboard.press("ControlOrMeta+b")
         if r.italic:
-            page.keyboard.press("Control+i")
+            page.keyboard.press("ControlOrMeta+i")
         page.keyboard.type(r.text)
         if r.italic:
-            page.keyboard.press("Control+i")
+            page.keyboard.press("ControlOrMeta+i")
         if r.bold:
-            page.keyboard.press("Control+b")
+            page.keyboard.press("ControlOrMeta+b")
 
 
 def _set_clipboard(page, html):
@@ -156,9 +156,9 @@ def _format_list_items(page, block_id, list_block):
         for (s, e, b, it) in format_segments(item.runs):
             if _select_range(page, li_sel, s, e):
                 if b:
-                    page.keyboard.press("Control+b")
+                    page.keyboard.press("ControlOrMeta+b")
                 if it:
-                    page.keyboard.press("Control+i")
+                    page.keyboard.press("ControlOrMeta+i")
 
 
 def _replace_paragraph_with_quote(page, block_id, quote):
@@ -170,7 +170,7 @@ def _replace_paragraph_with_quote(page, block_id, quote):
     overall block count unchanged.
     """
     page.locator(_block_sel(block_id) + " [contenteditable]").first.click()
-    page.keyboard.press("Control+a")
+    page.keyboard.press("ControlOrMeta+a")
     page.keyboard.press("Delete")
     _open_toolbox_on_active(page)
     page.eval_on_selector('.ce-toolbox__item[data-type="quote"]', "el => el.click()")
@@ -197,7 +197,7 @@ def _replace_marker_with_image(page, block, path, log):
         return
     block_loc = page.locator(".codex-editor .ce-block").nth(idx)
     block_loc.locator("[contenteditable]").first.click()  # anchor toolbar to this block
-    page.keyboard.press("Control+a")
+    page.keyboard.press("ControlOrMeta+a")
     page.keyboard.press("Delete")                          # empty the marker paragraph
     _open_toolbox_on_active(page)
     n_before = page.evaluate(
@@ -249,7 +249,7 @@ def build_document(page, doc, images_dir: Path, log=print):
     page.click(TITLE_SEL)
     page.keyboard.type(doc.title)
     page.keyboard.press("Enter")
-    page.keyboard.press("Control+V")
+    page.keyboard.press("ControlOrMeta+V")
     try:
         page.wait_for_function(
             """(n) => [...document.querySelectorAll('.codex-editor .ce-block')]
@@ -276,9 +276,9 @@ def build_document(page, doc, images_dir: Path, log=print):
                 for (s, e, b, it) in format_segments(block.runs):
                     if _select_range(page, sel, s, e):
                         if b:
-                            page.keyboard.press("Control+b")
+                            page.keyboard.press("ControlOrMeta+b")
                         if it:
-                            page.keyboard.press("Control+i")
+                            page.keyboard.press("ControlOrMeta+i")
             elif isinstance(block, ListBlock):
                 _format_list_items(page, ids[i], block)
 

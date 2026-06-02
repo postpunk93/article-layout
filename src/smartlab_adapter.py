@@ -110,7 +110,7 @@ def _replace_marker_with_image(page, block, path, log):
         return
     block_loc = page.locator(".codex-editor .ce-block").nth(idx)
     block_loc.locator("[contenteditable]").first.click()  # anchor toolbar to this block
-    page.keyboard.press("Control+a")
+    page.keyboard.press("ControlOrMeta+a")
     page.keyboard.press("Delete")                          # empty the marker paragraph
     _open_toolbox_on_active(page)
     n_before = page.evaluate(

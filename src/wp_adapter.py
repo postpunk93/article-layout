@@ -147,7 +147,7 @@ def build_document(page, doc, images_dir: Path, log=print):
         f'[data-block="{client_id}"][contenteditable="true"], '
         f'[data-block="{client_id}"] [contenteditable="true"]').first.click()
     log("Pasting body via real clipboard…")
-    page.keyboard.press("Control+V")
+    page.keyboard.press("ControlOrMeta+V")
     # Gutenberg parses the paste asynchronously; wait for the blocks to materialize
     # instead of a fixed sleep (mirrors vc_adapter). [[CAP:]] markers add paragraphs,
     # so the top-level count is always >= the IR block count.

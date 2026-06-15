@@ -104,10 +104,20 @@ def _replace_marker_with_image(page, block, path, log):
     block_loc = page.locator('[data-editor="ZenDraftEditor"][data-block="true"]').nth(idx)
     block_loc.scroll_into_view_if_needed()
     block_loc.click()
-    # Empty ONLY this marker block. DraftJS treats Ctrl+A as "select the whole editor",
-    # so Ctrl+A + Delete would wipe the entire body — select just this line instead.
-    page.keyboard.press("Home")
-    page.keyboard.press("Shift+End")
+    # Empty ONLY this marker block. Keyboard line-selection is unsafe: Ctrl+A selects the
+    # whole Draft.js editor, and on macOS Shift+End selects to the END OF THE DOCUMENT (not
+    # the line) — either Delete would wipe the body below the marker (the bug fixed in the
+    # LJ adapter). Select EXACTLY this block's contents via a DOM Range instead; the range
+    # can't reach past the block, so the rest of the body survives.
+    block_loc.evaluate(
+        """(el) => {
+            const r = document.createRange();
+            r.selectNodeContents(el);
+            const s = window.getSelection();
+            s.removeAllRanges();
+            s.addRange(r);
+        }"""
+    )
     page.keyboard.press("Delete")
     # Reveal the side "+" by hovering the block's left gutter, then click it.
     # +10px puts the cursor just inside the left gutter where the "+" anchors.
@@ -178,7 +188,20 @@ def _strip_blank_after_images(page, log):
         blk = page.locator(sel).nth(idx)
         blk.scroll_into_view_if_needed()
         blk.click()
-        page.keyboard.press("End")
+        # Put the caret at the END of this blank block, then forward-Delete to merge the
+        # next paragraph up. Avoid the End key: on macOS it jumps to the END OF THE DOCUMENT,
+        # so the merge would target the wrong place (or no-op). Collapse a DOM Range to the
+        # block's end instead.
+        blk.evaluate(
+            """(el) => {
+                const r = document.createRange();
+                r.selectNodeContents(el);
+                r.collapse(false);
+                const s = window.getSelection();
+                s.removeAllRanges();
+                s.addRange(r);
+            }"""
+        )
         page.keyboard.press("Delete")
         page.wait_for_timeout(150)
         removed += 1

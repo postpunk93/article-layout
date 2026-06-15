@@ -95,34 +95,23 @@ def _replace_marker_with_image(page, block, path, log):
         return
     block_loc = page.locator('[data-block="true"]').nth(idx)
     block_loc.scroll_into_view_if_needed()
-    # Place the caret INSIDE this marker block and VERIFY it landed before deleting
-    # anything. The caret can lag behind the click — e.g. it's still in the previous
-    # image's caption textarea we just typed into — and a blind Home/Shift+End/Delete
-    # would then select and EAT whichever block the caret is really in (observed:
-    # the preceding paragraph losing its opening words). Re-click until getSelection's
-    # anchor is in THIS block; only then delete.
-    placed = False
-    for _ in range(6):
-        block_loc.click()
-        page.wait_for_timeout(150)
-        placed = block_loc.evaluate(
-            """(el) => {
-                const s = window.getSelection();
-                let n = s && s.anchorNode;
-                while (n && n !== el) n = n.parentElement;
-                return !!n;
-            }"""
-        )
-        if placed:
-            break
-    if not placed:
-        log(f"  could not place caret in marker block for {block.file} — skipping")
-        return
-    # Caret confirmed in this single-line marker block. Select just this line and
-    # delete it (Ctrl+A would select the WHOLE Draft.js editor). One pass is safe now —
-    # the caret can't be in a sibling block.
-    page.keyboard.press("Home")
-    page.keyboard.press("Shift+End")
+    # Empty ONLY this marker block. We must NOT use keyboard line-selection: LJ's Draft.js
+    # binds End/Shift+End to "select to the END OF THE DOCUMENT" (not end of line), so a
+    # Home→Shift+End→Delete deletes everything from the first image marker to the bottom of
+    # the article (verified: 18416→1162 chars after the first image). Instead, click to focus
+    # the editor, then select EXACTLY this block's contents via a DOM Range and Delete — the
+    # range can't reach past this block, so the rest of the body survives.
+    block_loc.click()
+    page.wait_for_timeout(100)
+    block_loc.evaluate(
+        """(el) => {
+            const r = document.createRange();
+            r.selectNodeContents(el);
+            const s = window.getSelection();
+            s.removeAllRanges();
+            s.addRange(r);
+        }"""
+    )
     page.keyboard.press("Delete")
     n_before = page.evaluate("() => document.querySelectorAll('.public-DraftEditor-content img').length")
     # The single PLupload input uploads at the cursor (this emptied block); set_input_files

@@ -26,6 +26,24 @@ PROFILES_ROOT = Path(".profiles")
 # an absolute path (see open_context).
 _ANTI_AUTOMATION_ARGS = ["--start-maximized", "--disable-blink-features=AutomationControlled"]
 _MASK_WEBDRIVER = "Object.defineProperty(navigator,'webdriver',{get:()=>undefined});"
+
+
+def _ignore_default_args() -> list[str]:
+    """Playwright default-args to suppress when launching the automated Chrome.
+
+    Always drops --enable-automation (anti-bot hygiene). On macOS ALSO drops
+    --use-mock-keychain: Playwright passes it by default, which makes Chrome use a
+    fake Keychain — so it can neither decrypt the auth cookies that manual_login's
+    real Chrome wrote with the OS Keychain key NOR keep them (it deletes the
+    "corrupt" cookies on startup). Dropping it lets the automated Chrome share the
+    real 'Chrome Safe Storage' Keychain key, so a saved login finally reads back.
+    NOT changed on Windows: there Chrome uses DPAPI, the flag is a no-op, and the
+    existing setup already works. See the cookie-decryption bug notes.
+    """
+    drop = ["--enable-automation"]
+    if sys.platform == "darwin":
+        drop.append("--use-mock-keychain")
+    return drop
 def _chrome_candidates() -> list[Path]:
     """Likely paths to the installed Chrome for the current OS.
 
@@ -61,7 +79,12 @@ def chrome_executable() -> str | None:
 
 
 def _login_argv(exe: str, pdir: Path, urls: list[str]) -> list[str]:
-    """Chrome argv: exe, absolute shared-profile dir, then one tab per URL."""
+    """Chrome argv: exe, absolute shared-profile dir, then one tab per URL.
+
+    This is a plain (non-Playwright) Chrome, so it already uses the real macOS
+    Keychain to encrypt cookies — the automated Chrome is the side that must be
+    told to match it (see _ignore_default_args).
+    """
     return [exe, f"--user-data-dir={pdir.resolve()}", *urls]
 
 
@@ -199,7 +222,7 @@ def open_context(p, client: str, headless: bool, root: Path = PROFILES_ROOT):
         headless=headless,
         args=_ANTI_AUTOMATION_ARGS,
         no_viewport=True,
-        ignore_default_args=["--enable-automation"],
+        ignore_default_args=_ignore_default_args(),
     )
     if chrome_executable():
         kwargs["channel"] = "chrome"

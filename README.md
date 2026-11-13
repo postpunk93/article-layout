@@ -108,3 +108,7 @@ python -m pytest -q
 - План беты: `docs/plans/2026-06-02-beta-prep.md`
 
 Кроссплатформенность Windows/macOS: один и тот же репозиторий работает на обеих ОС (клавиши через Playwright `ControlOrMeta`, путь к Chrome определяется по ОС). Целевая платформа коллеги — macOS.
+
+## Лицензия
+
+MIT — подробности в [LICENSE](LICENSE).
